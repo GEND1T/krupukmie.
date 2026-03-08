@@ -420,145 +420,381 @@ function updateCartBadge() {
 document.addEventListener('DOMContentLoaded', updateCartBadge);
 
 // =========================================
-// 7. LOGIKA HALAMAN CHECKOUT (checkout.html)
+// 7. LOGIKA HALAMAN CHECKOUT ALA TIKTOK/SHOPEE
 // =========================================
 
-const checkoutPage = document.querySelector('.checkout-page');
+const checkoutPage = document.querySelector('.mobile-checkout-page');
 
 if (checkoutPage) {
-    const cartItemsContainer = document.getElementById('checkoutCartItems');
-    const subtotalEl = document.getElementById('checkoutSubtotal');
-    const ongkirEl = document.getElementById('checkoutOngkir');
-    const totalEl = document.getElementById('checkoutTotal');
-    const btnPayNow = document.getElementById('btnPayNow');
-    
-    let ongkirAmount = 15000;
+    // Variabel Kalkulasi Global
+    let subtotalAmount = 0;
+    let ongkirAmount = 0;
+    let adminFee = 2500; // Biaya layanan statis
 
+    // Format Rupiah
     function formatRupiahCheckout(number) {
-        return new Intl.NumberFormat('id-ID', { 
-            style: 'currency', currency: 'IDR', minimumFractionDigits: 0 
-        }).format(number);
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
     }
 
-    // Fungsi utama untuk me-render keranjang
-    function renderCheckoutSummary() {
+    // --- A. RENDER KERANJANG & FITUR EDIT ITEM ---
+    function renderCheckoutItems() {
+        const cartContainer = document.getElementById('checkoutCartItems');
+        const subtotalEl = document.getElementById('checkoutSubtotal');
         let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
 
-        // State: Keranjang Kosong
         if (cart.length === 0) {
-            cartItemsContainer.innerHTML = `
-                <div style="text-align: center; padding: 1rem 0;">
-                    <i class="fas fa-cart-arrow-down" style="font-size: 2rem; color: #E5E7EB; margin-bottom: 1rem;"></i>
-                    <p style="color: var(--text-muted); font-size: 0.95rem;">Keranjang Anda masih kosong.</p>
-                    <a href="store.html" style="display: inline-block; margin-top: 0.5rem; color: var(--primary-yellow); font-weight: 600; text-decoration: underline;">Belanja Sekarang</a>
-                </div>
-            `;
-            
-            subtotalEl.textContent = formatRupiahCheckout(0);
-            ongkirEl.textContent = formatRupiahCheckout(0);
-            totalEl.textContent = formatRupiahCheckout(0);
-            
-            btnPayNow.disabled = true;
-            btnPayNow.style.opacity = '0.5';
-            btnPayNow.style.cursor = 'not-allowed';
-            return; 
+            alert('Keranjang kosong! Mengarahkan kembali ke toko.');
+            window.location.href = 'store.html';
+            return;
         }
 
-        // State: Keranjang Terisi
-        let subtotal = 0;
         let cartHtml = '';
+        subtotalAmount = 0;
 
-        cart.forEach(item => {
-            subtotal += item.total;
-            // Menambahkan struktur tombol di dalam item
+        cart.forEach((item, index) => {
+            subtotalAmount += item.total;
             cartHtml += `
-                <div class="cart-item-row" data-id="${item.id}">
-                    <div class="cart-item-info">
-                        <span class="cart-item-title">${item.name}</span>
-                        <div class="cart-item-actions">
-                            <span class="cart-item-variant">${item.variant}</span>
-                            <span style="color: #E5E7EB; margin: 0 5px;">|</span>
-                            
-                            <button class="qty-btn-small btn-decrease" title="Kurangi"><i class="fas fa-minus" style="pointer-events: none;"></i></button>
-                            <span class="item-qty-text">${item.qty}</span>
-                            <button class="qty-btn-small btn-increase" title="Tambah"><i class="fas fa-plus" style="pointer-events: none;"></i></button>
-                            
-                            <button class="btn-remove-item" title="Hapus Item"><i class="fas fa-trash" style="pointer-events: none;"></i></button>
-                        </div>
+                <div class="checkout-item-card" data-index="${index}">
+                    <div class="item-info-area">
+                        <span class="item-title">${item.name}</span>
+                        <span class="item-variant">Varian: ${item.variant}</span>
+                        <span class="item-price-checkout">${formatRupiahCheckout(item.total)}</span>
                     </div>
-                    <span class="cart-item-price">${formatRupiahCheckout(item.total)}</span>
+                    
+                    <div class="item-action-area">
+                        <div class="qty-control">
+                            <button class="qty-btn-small btn-decrease-checkout"><i class="fas fa-minus" style="pointer-events: none;"></i></button>
+                            <span class="qty-text">${item.qty}</span>
+                            <button class="qty-btn-small btn-increase-checkout"><i class="fas fa-plus" style="pointer-events: none;"></i></button>
+                        </div>
+                        <button class="btn-remove-checkout"><i class="fas fa-trash" style="pointer-events: none;"></i></button>
+                    </div>
                 </div>
             `;
         });
 
-        cartItemsContainer.innerHTML = cartHtml;
-        subtotalEl.textContent = formatRupiahCheckout(subtotal);
-        ongkirEl.textContent = formatRupiahCheckout(ongkirAmount);
-        
-        let grandTotal = subtotal + ongkirAmount;
-        totalEl.textContent = formatRupiahCheckout(grandTotal);
-        
-        btnPayNow.disabled = false;
-        btnPayNow.style.opacity = '1';
-        btnPayNow.style.cursor = 'pointer';
+        cartContainer.innerHTML = cartHtml;
+        subtotalEl.textContent = formatRupiahCheckout(subtotalAmount);
+        updateGrandTotal(); // Memperbarui total harga di bawah
     }
 
-    // Jalankan pertama kali saat halaman dimuat
-    renderCheckoutSummary();
+    // ========================================================
+    // Delegasi Event untuk Tombol Edit di Checkout
+    // ========================================================
+    const checkoutCartContainer = document.getElementById('checkoutCartItems');
+    
+    if (checkoutCartContainer) {
+        checkoutCartContainer.addEventListener('click', function(e) {
+            // PERBAIKAN 1: Cari elemen berdasarkan class CSS yang baru (.checkout-item-card)
+            const card = e.target.closest('.checkout-item-card');
+            if (!card) return; // Jika klik di luar area produk, abaikan
 
-    // -------------------------------------------------------------
-    // LOGIKA INTERAKSI TOMBOL EDIT (Event Delegation)
-    // -------------------------------------------------------------
-    cartItemsContainer.addEventListener('click', function(e) {
-        // Ambil elemen baris yang diklik untuk mengetahui ID produknya
-        const row = e.target.closest('.cart-item-row');
-        if (!row) return; // Jika klik di luar baris item, abaikan
-
-        const itemId = row.getAttribute('data-id');
-        let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
-        const itemIndex = cart.findIndex(item => item.id === itemId);
-        
-        if (itemIndex === -1) return; // Pengaman jika data tidak ditemukan
-
-        // Cek tombol mana yang ditekan
-        if (e.target.classList.contains('btn-increase')) {
-            // Tambah Qty
-            cart[itemIndex].qty += 1;
-            cart[itemIndex].total = cart[itemIndex].qty * cart[itemIndex].price;
+            const itemIndex = card.getAttribute('data-index');
+            let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
             
-        } else if (e.target.classList.contains('btn-decrease')) {
-            // Kurangi Qty
-            if (cart[itemIndex].qty > 1) {
-                cart[itemIndex].qty -= 1;
+            if (!cart[itemIndex]) return; // Pengaman data
+
+            // PERBAIKAN 2: Gunakan closest() agar jika ikon yang terklik, tetap dihitung sebagai tombol
+            if (e.target.closest('.btn-increase-checkout')) {
+                cart[itemIndex].qty += 1;
                 cart[itemIndex].total = cart[itemIndex].qty * cart[itemIndex].price;
-            } else {
-                // Jika qty 1 dan dikurangi, konfirmasi penghapusan
-                if (confirm('Hapus produk ini dari keranjang?')) {
-                    cart.splice(itemIndex, 1);
+                
+            } else if (e.target.closest('.btn-decrease-checkout')) {
+                if (cart[itemIndex].qty > 1) {
+                    cart[itemIndex].qty -= 1;
+                    cart[itemIndex].total = cart[itemIndex].qty * cart[itemIndex].price;
+                } else {
+                    if (confirm('Hapus produk ini dari pesanan?')) cart.splice(itemIndex, 1);
                 }
+                
+            } else if (e.target.closest('.btn-remove-checkout')) {
+                if (confirm('Hapus produk ini dari pesanan?')) cart.splice(itemIndex, 1);
+                
+            } else {
+                return; // Abaikan jika klik di teks/area kosong
             }
-            
-        } else if (e.target.classList.contains('btn-remove-item')) {
-            // Hapus Item
-            if (confirm('Hapus produk ini dari keranjang?')) {
-                cart.splice(itemIndex, 1);
-            }
-        } else {
-            return; // Mengklik teks/kosong, jangan lakukan apa-apa
+
+            // Simpan data terbaru dan render ulang layarnya instan
+            localStorage.setItem('krupukCart', JSON.stringify(cart));
+            renderCheckoutItems(); 
+        });
+    }
+
+    // --- B. MANAJEMEN MULTI-BOTTOM SHEET ---
+    const overlay = document.getElementById('checkoutOverlay');
+    
+    function openSheet(sheetId) {
+        document.getElementById(sheetId).classList.add('expanded');
+        overlay.classList.add('active');
+    }
+
+    function closeAllSheets() {
+        document.querySelectorAll('.bottom-sheet-container').forEach(sheet => {
+            sheet.classList.remove('expanded');
+        });
+        overlay.classList.remove('active');
+    }
+
+    // Event Listener untuk Buka Sheet
+    document.getElementById('btnOpenAddress').addEventListener('click', () => openSheet('sheetAddress'));
+    document.getElementById('btnOpenShipping').addEventListener('click', () => openSheet('sheetShipping'));
+    document.getElementById('btnOpenPayment').addEventListener('click', () => openSheet('sheetPayment'));
+
+    // Event Listener untuk Tutup Sheet (Tombol X & Overlay)
+    document.querySelectorAll('.close-sheet-btn').forEach(btn => {
+        btn.addEventListener('click', closeAllSheets);
+    });
+    overlay.addEventListener('click', closeAllSheets);
+
+
+    // --- C. LOGIKA BITESHIP AUTOCOMPLETE (DI DALAM SHEET ALAMAT) ---
+    const areaSearch = document.getElementById('areaSearch');
+    const areaList = document.getElementById('areaList');
+    const biteshipAreaId = document.getElementById('biteshipAreaId');
+    const kodeposInput = document.getElementById('kodepos');
+    let debounceTimer;
+
+    areaSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length < 3) {
+            areaList.classList.remove('active');
+            biteshipAreaId.value = '';
+            kodeposInput.value = '';
+            return;
         }
 
-        // 1. Simpan data baru ke memori
-        localStorage.setItem('krupukCart', JSON.stringify(cart));
-        
-        // 2. Render ulang layar checkout dengan harga baru
-        renderCheckoutSummary();
-        
-        // 3. Update angka keranjang merah di navbar
-        updateCartBadge(); 
+        document.getElementById('searchLoading').style.display = 'block';
+
+        debounceTimer = setTimeout(() => {
+            // Simulasi API Biteship
+            const mockData = [
+                { id: 'ID123', name: `${query}`, detail: 'Kab. Tegal, Jawa Tengah', postal: '52194' },
+                { id: 'ID124', name: `${query} Barat`, detail: 'Kab. Tegal, Jawa Tengah', postal: '52195' }
+            ];
+            
+            areaList.innerHTML = '';
+            mockData.forEach(area => {
+                const li = document.createElement('li');
+                li.className = 'autocomplete-item';
+                li.innerHTML = `<span class="area-name">Kecamatan ${area.name}</span><span class="area-detail">${area.detail}, ${area.postal}</span>`;
+                li.addEventListener('click', () => {
+                    areaSearch.value = `Kecamatan ${area.name}, ${area.detail}`;
+                    biteshipAreaId.value = area.id;
+                    kodeposInput.value = area.postal;
+                    areaList.classList.remove('active');
+                });
+                areaList.appendChild(li);
+            });
+            areaList.classList.add('active');
+            document.getElementById('searchLoading').style.display = 'none';
+        }, 800);
     });
 
-    // Aksi Tombol Bayar
-    btnPayNow.addEventListener('click', function() {
-        alert('Keranjang belanja siap diproses! Kita bisa lanjut ke integrasi API Logistik.');
+
+    // --- D. LOGIKA SIMPAN ALAMAT & BUKA KUNCI KURIR ---
+    document.getElementById('btnSaveAddress').addEventListener('click', function() {
+        const fullname = document.getElementById('fullname').value;
+        const phone = document.getElementById('phone').value;
+        const areaId = biteshipAreaId.value;
+        const alamatLengkap = document.getElementById('alamatLengkap').value;
+
+        // Validasi Form Dasar
+        if (!fullname || !phone || !areaId || !alamatLengkap) {
+            alert('Mohon lengkapi semua data alamat dan pilih kecamatan dari saran yang muncul.');
+            return;
+        }
+
+        // 1. Ubah Tampilan Kartu Alamat di Layar Utama
+        document.getElementById('emptyAddressState').style.display = 'none';
+        document.getElementById('filledAddressState').style.display = 'block';
+        document.getElementById('displayCustName').textContent = `${fullname} | ${phone}`;
+        document.getElementById('displayCustAddress').textContent = `${alamatLengkap}, ${areaSearch.value} (${kodeposInput.value})`;
+
+        // 2. Buka Kunci Kartu Opsi Pengiriman!
+        const btnShipping = document.getElementById('btnOpenShipping');
+        btnShipping.style.opacity = '1';
+        btnShipping.style.pointerEvents = 'auto';
+
+        // 3. Tutup Sheet Alamat
+        closeAllSheets();
+
+        // 4. Otomatis Cari Ongkir berdasarkan Area ID baru
+        fetchShippingRates(areaId);
+    });
+
+
+    // --- E. LOGIKA OPSI PENGIRIMAN & UPDATE TOTAL ---
+    function fetchShippingRates(areaId) {
+        const container = document.getElementById('shippingOptionsContainer');
+        container.innerHTML = `<p style="text-align: center; padding: 2rem 0;"><i class="fas fa-spinner fa-spin"></i> Mencari kurir terbaik...</p>`;
+        
+        // Simulasi hitung ongkir
+        setTimeout(() => {
+            const mockRates = [
+                { id: 'jne-reg', name: 'JNE Reguler', duration: '2-3 Hari', price: 15000 },
+                { id: 'sicepat-halu', name: 'SiCepat Halu', duration: '2-4 Hari', price: 12500 }
+            ];
+
+            let html = '';
+            mockRates.forEach((rate, index) => {
+                html += `
+                    <label class="shipping-card" style="display: block; margin-bottom: 10px; cursor: pointer;">
+                        <input type="radio" name="kurirRadio" value="${rate.id}" data-name="${rate.name}" data-price="${rate.price}" style="display: none;">
+                        <div class="shipping-content" style="padding: 1rem; border: 1px solid #E5E7EB; border-radius: 8px; display: flex; justify-content: space-between;">
+                            <div><strong style="display: block;">${rate.name}</strong><span style="font-size: 0.8rem; color: #6B7280;">Estimasi ${rate.duration}</span></div>
+                            <strong style="color: var(--primary-yellow);">${formatRupiahCheckout(rate.price)}</strong>
+                        </div>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+
+            // Tambahkan event click pada setiap kurir di dalam sheet
+            const kurirRadios = container.querySelectorAll('input[name="kurirRadio"]');
+            kurirRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Update UI di layar utama
+                    document.getElementById('displayShipping').textContent = this.getAttribute('data-name');
+                    document.getElementById('displayShippingCost').textContent = formatRupiahCheckout(this.getAttribute('data-price'));
+                    
+                    // Update Kalkulasi
+                    ongkirAmount = parseInt(this.getAttribute('data-price'));
+                    updateGrandTotal();
+                    
+                    // Tutup sheet setelah memilih
+                    setTimeout(closeAllSheets, 300);
+                });
+            });
+
+        }, 1000);
+    }
+
+
+    // --- F. LOGIKA METODE PEMBAYARAN ---
+    const paymentRadios = document.querySelectorAll('input[name="payment"]');
+    paymentRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Ambil nama kurir dari span terdekat
+            const paymentName = this.nextElementSibling.querySelector('.kurir-name').textContent;
+            document.getElementById('displayPayment').textContent = paymentName;
+            
+            // Tutup sheet setelah memilih
+            setTimeout(closeAllSheets, 300);
+        });
+    });
+
+
+    // --- G. FUNGSI UPDATE GRAND TOTAL ---
+    function updateGrandTotal() {
+        const grandTotal = subtotalAmount + ongkirAmount + adminFee;
+        
+        // Update rincian di bawah
+        document.getElementById('checkoutOngkir').textContent = formatRupiahCheckout(ongkirAmount);
+        document.getElementById('checkoutAdmin').textContent = formatRupiahCheckout(adminFee);
+        
+        // Update Sticky Footer (Tombol Buat Pesanan)
+        document.getElementById('checkoutGrandTotal').textContent = formatRupiahCheckout(grandTotal);
+    }
+
+    // Jalankan render awal
+    renderCheckoutItems();
+    
+    // ========================================================
+    // H. AKSI TOMBOL BUAT PESANAN (INTEGRASI N8N & MIDTRANS)
+    // ========================================================
+    const btnPlaceOrder = document.getElementById('btnPlaceOrder');
+
+    btnPlaceOrder.addEventListener('click', async function() {
+        if (ongkirAmount === 0) {
+            alert('Mohon lengkapi Alamat dan pilih Opsi Pengiriman terlebih dahulu.');
+            openSheet('sheetAddress'); 
+            return;
+        }
+
+        const paymentSelected = document.querySelector('input[name="payment"]:checked');
+        if (!paymentSelected) {
+            alert('Mohon pilih metode pembayaran.');
+            openSheet('sheetPayment');
+            return;
+        }
+
+        let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
+        const orderPayload = {
+            customer: {
+                name: document.getElementById('fullname').value,
+                phone: document.getElementById('phone').value,
+                email: 'customer@email.com',
+                address: document.getElementById('alamatLengkap').value,
+                area_id: document.getElementById('biteshipAreaId').value 
+            },
+            items: cart,
+            shipping: {
+                courier: document.querySelector('input[name="kurirRadio"]:checked').value,
+                cost: ongkirAmount
+            },
+            payment_method: paymentSelected.value,
+            summary: {
+                subtotal: subtotalAmount,
+                admin_fee: adminFee,
+                grand_total: subtotalAmount + ongkirAmount + adminFee
+            }
+        };
+
+        const originalBtnText = btnPlaceOrder.innerHTML;
+        btnPlaceOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        btnPlaceOrder.disabled = true;
+
+        try {
+            // 1. Tembak ke Webhook n8n Anda
+            const webhookUrl = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook-test/proses-checkout'; 
+            
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderPayload)
+            });
+            
+           // 2. Tangkap balasan dari n8n
+           const data = await response.json(); 
+            
+           // PENGAMAN JITU: Cek apakah n8n membalas berupa Array [ {token:...} ] atau Object {token:...}
+           const snapToken = Array.isArray(data) ? data[0].token : data.token;
+
+           // Periksa apakah token benar-benar ada
+           if (!snapToken) {
+               console.error("Respons n8n:", data);
+               throw new Error("Gagal mendapatkan Token dari server n8n.");
+           }
+               // ... (kode onSuccess dkk biarkan sama) ...
+            // 3. Panggil Pop-up Midtrans (Dipastikan window.snap sudah ter-load)
+            window.snap.pay(snapToken, {
+                onSuccess: function(result){
+                    alert("Pembayaran Berhasil! Pesanan sedang diproses.");
+                    localStorage.removeItem('krupukCart'); 
+                    window.location.reload(); 
+                },
+                onPending: function(result){
+                    alert("Menunggu pembayaran Anda. Silakan cek detail di halaman selanjutnya.");
+                    localStorage.removeItem('krupukCart');
+                    window.location.reload(); 
+                },
+                onError: function(result){
+                    alert("Pembayaran gagal! Silakan coba lagi.");
+                },
+                onClose: function(){
+                    alert('Anda menutup layar pembayaran sebelum menyelesaikannya.');
+                }
+            });
+
+        } catch (error) {
+            console.error('Error Checkout:', error);
+            alert('Terjadi kesalahan koneksi ke server. Pastikan Webhook n8n sedang aktif (Listen for Test Event).');
+        } finally {
+            // Apapun yang terjadi (berhasil/gagal), kembalikan wujud tombol seperti semula
+            btnPlaceOrder.innerHTML = originalBtnText;
+            btnPlaceOrder.disabled = false;
+        }
     });
 }

@@ -11,137 +11,137 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+    <head>
+        <script type="text/javascript"
+                src="https://app.sandbox.midtrans.com/snap/snap.js"
+                data-client-key="Mid-client-v-4iHkRfLT09KDOy">
+        </script>
+    </head>
+
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-light"> <header class="header scrolled" style="position: static; padding: 1rem 0;"> 
+<body class="bg-light"> 
+    <header class="header scrolled" style="position: sticky; top: 0; z-index: 900; padding: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"> 
         <div class="container nav-container" style="justify-content: space-between;">
-            <a href="store.html" class="logo">KrupukMie.</a>
-            <div class="secure-badge" style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem;">
-                <i class="fas fa-lock" style="color: #10B981;"></i> Checkout Aman
+            <a href="store.html" class="logo" style="font-size: 1.2rem;"><i class="fas fa-arrow-left"></i> Checkout</a>
+            <div class="secure-badge" style="color: var(--text-muted); font-size: 0.85rem;">
+                <i class="fas fa-shield-halved" style="color: #10B981;"></i> Aman
             </div>
         </div>
     </header>
 
-    <main class="checkout-page">
-        <div class="container">
-            <div class="checkout-grid">
-                
-                <div class="checkout-form-section">
-                    
-                    <div class="checkout-box">
-                        <h2 class="box-title">1. Informasi Kontak</h2>
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="email">Alamat Email</label>
-                                <input type="email" id="email" placeholder="Untuk resi & notifikasi" required>
-                            </div>
-                            <div class="input-group">
-                                <label for="phone">Nomor WhatsApp</label>
-                                <input type="tel" id="phone" placeholder="Contoh: 081234567890" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="checkout-box">
-                        <h2 class="box-title">2. Alamat Pengiriman</h2>
-                        <div class="input-group">
-                            <label for="fullname">Nama Penerima</label>
-                            <input type="text" id="fullname" placeholder="Nama Lengkap" required>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="provinsi">Provinsi</label>
-                                <select id="provinsi" required>
-                                    <option value="" disabled selected>Pilih Provinsi...</option>
-                                    <option value="jawa-tengah">Jawa Tengah</option>
-                                    <option value="jawa-barat">Jawa Barat</option>
-                                    <option value="dki-jakarta">DKI Jakarta</option>
-                                    </select>
-                            </div>
-                            <div class="input-group">
-                                <label for="kota">Kota / Kabupaten</label>
-                                <select id="kota" disabled required>
-                                    <option value="" disabled selected>Pilih Kota/Kab...</option>
-                                    </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="kecamatan">Kecamatan</label>
-                                <select id="kecamatan" disabled required>
-                                    <option value="" disabled selected>Pilih Kecamatan...</option>
-                                    </select>
-                            </div>
-                            <div class="input-group">
-                                <label for="kodepos">Kode Pos</label>
-                                <input type="text" id="kodepos" placeholder="Contoh: 50123" required>
-                            </div>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="alamatLengkap">Alamat Lengkap (Jalan, RT/RW, Patokan)</label>
-                            <textarea id="alamatLengkap" rows="3" placeholder="Contoh: Jl. Merdeka No. 10, RT 01/RW 02, Samping Masjid Besar..." required></textarea>
-                        </div>
-                    </div>
-
-                    <div class="checkout-box">
-                        <h2 class="box-title">3. Pengiriman</h2>
-                        <div class="shipping-options">
-                            <label class="shipping-card">
-                                <input type="radio" name="kurir" value="reguler" checked>
-                                <div class="shipping-content">
-                                    <div class="shipping-info">
-                                        <span class="kurir-name">JNE Reguler</span>
-                                        <span class="kurir-etd">Estimasi 2-3 Hari</span>
-                                    </div>
-                                    <span class="kurir-price">Rp 15.000</span>
-                                </div>
-                            </label>
-                            </div>
-                    </div>
-
-                </div>
-
-                <div class="order-summary-section">
-                    <div class="summary-box sticky-summary">
-                        <h2 class="box-title">Ringkasan Pesanan</h2>
-                        
-                        <div id="checkoutCartItems" class="checkout-cart-items">
-                            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Memuat keranjang...</p>
-                        </div>
-
-                        <hr class="summary-divider">
-
-                        <div class="summary-calc">
-                            <div class="calc-row">
-                                <span>Subtotal Produk</span>
-                                <span id="checkoutSubtotal">Rp 0</span>
-                            </div>
-                            <div class="calc-row">
-                                <span>Ongkos Kirim</span>
-                                <span id="checkoutOngkir">Rp 15.000</span> </div>
-                            <div class="calc-row total-row">
-                                <span>Total Tagihan</span>
-                                <span id="checkoutTotal">Rp 0</span>
-                            </div>
-                        </div>
-
-                        <button id="btnPayNow" class="btn-primary w-100 mt-2" style="width: 100%; font-size: 1.1rem; padding: 1rem;">
-                            <i class="fas fa-shield-halved"></i> Lanjut Pembayaran
-                        </button>
-                        
-                        <p class="secure-text">
-                            <i class="fas fa-lock"></i> Pembayaran aman dan terenkripsi.
-                        </p>
-                    </div>
-                </div>
-
+    <main class="mobile-checkout-page">
+        <section class="checkout-section clickable-card" id="btnOpenAddress">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-location-dot" style="color: #EF4444; margin-right: 8px;"></i> Alamat Pengiriman</h2>
             </div>
+            <div class="empty-address-state" id="emptyAddressState">
+                <p><i class="fas fa-plus"></i> Tambah alamat pengiriman</p>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+            <div class="filled-address-state" id="filledAddressState" style="display: none;">
+                <p class="address-name" id="displayCustName">Budi Santoso | 081234567890</p>
+                <p class="address-detail" id="displayCustAddress">Jl. Merdeka No. 10, Kecamatan Adiwerna, Kab. Tegal, 52194</p>
+                <i class="fas fa-chevron-right arrow-icon" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%);"></i>
+            </div>
+        </section>
+
+        <section class="checkout-section">
+            <h2 class="section-title" style="margin-bottom: 1rem;">Ringkasan Pesanan</h2>
+            <div id="checkoutCartItems" class="checkout-item-list">
+                <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Memuat pesanan...</p>
+            </div>
+        </section>
+
+        <section class="checkout-section clickable-card" id="btnOpenShipping" style="opacity: 0.5; pointer-events: none;">
+            <div class="flex-between">
+                <div>
+                    <h2 class="section-title" style="margin-bottom: 0.3rem;"><i class="fas fa-truck" style="color: #3B82F6; margin-right: 8px;"></i> Opsi Pengiriman</h2>
+                    <p class="selected-text" id="displayShipping">Pilih alamat terlebih dahulu</p>
+                </div>
+                <div class="right-align">
+                    <p class="shipping-cost" id="displayShippingCost">Rp 0</p>
+                    <i class="fas fa-chevron-right arrow-icon"></i>
+                </div>
+            </div>
+        </section>
+
+        <section class="checkout-section clickable-card" id="btnOpenPayment">
+            <div class="flex-between">
+                <div>
+                    <h2 class="section-title" style="margin-bottom: 0.3rem;"><i class="fas fa-wallet" style="color: var(--primary-yellow); margin-right: 8px;"></i> Metode Pembayaran</h2>
+                    <p class="selected-text" id="displayPayment">Pilih Pembayaran</p>
+                </div>
+                <i class="fas fa-chevron-right arrow-icon"></i>
+            </div>
+        </section>
+
+        <section class="checkout-section">
+            <h2 class="section-title" style="margin-bottom: 1rem;">Rincian Pembayaran</h2>
+            <div class="summary-calc">
+                <div class="calc-row"><span>Subtotal Produk</span><span id="checkoutSubtotal">Rp 0</span></div>
+                <div class="calc-row"><span>Subtotal Pengiriman</span><span id="checkoutOngkir">Rp 0</span></div>
+                <div class="calc-row"><span>Biaya Layanan / Admin</span><span id="checkoutAdmin">Rp 2.500</span></div>
+            </div>
+        </section>
+
+        <div class="mobile-checkout-footer">
+            <div class="total-wrap">
+                <span class="label">Total Pembayaran</span>
+                <span class="price" id="checkoutGrandTotal">Rp 0</span>
+            </div>
+            <button class="btn-primary btn-place-order" id="btnPlaceOrder">Buat Pesanan</button>
         </div>
     </main>
 
+    <div class="cart-overlay" id="checkoutOverlay"></div>
+
+    <div class="bottom-sheet-container" id="sheetAddress">
+        <div class="sheet-panel">
+            <div class="sheet-header">
+                <h3>Alamat Pengiriman</h3>
+                <button class="close-sheet-btn" data-target="sheetAddress"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="sheet-body" style="max-height: 75vh;">
+                <div class="input-group"><label>Nama Penerima</label><input type="text" id="fullname" placeholder="Nama Lengkap" required></div>
+                <div class="input-group"><label>Nomor WhatsApp</label><input type="tel" id="phone" placeholder="Contoh: 081234567890" required></div>
+                
+                <div class="input-group" style="position: relative;">
+                    <label>Kecamatan / Kelurahan Tujuan</label>
+                    <input type="text" id="areaSearch" placeholder="Ketik nama kecamatan..." autocomplete="off" required>
+                    <i class="fas fa-spinner fa-spin search-loading" id="searchLoading" style="display: none;"></i>
+                    <ul class="autocomplete-list" id="areaList"></ul>
+                    <input type="hidden" id="biteshipAreaId">
+                </div>
+                
+                <div class="input-group"><label>Kode Pos</label><input type="text" id="kodepos" readonly style="background-color: #F3F4F6;"></div>
+                <div class="input-group"><label>Alamat Lengkap</label><textarea id="alamatLengkap" rows="2" placeholder="Nama Jalan, RT/RW, Patokan..." required></textarea></div>
+                
+                <button class="btn-primary w-100 mt-2" id="btnSaveAddress" style="padding: 1rem;">Simpan Alamat</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-sheet-container" id="sheetShipping">
+        <div class="sheet-panel">
+            <div class="sheet-header"><h3>Opsi Pengiriman</h3><button class="close-sheet-btn" data-target="sheetShipping"><i class="fas fa-times"></i></button></div>
+            <div class="sheet-body" id="shippingOptionsContainer">
+                <p style="text-align: center; color: var(--text-muted); padding: 2rem 0;">Mencari kurir...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-sheet-container" id="sheetPayment">
+        <div class="sheet-panel">
+            <div class="sheet-header"><h3>Metode Pembayaran</h3><button class="close-sheet-btn" data-target="sheetPayment"><i class="fas fa-times"></i></button></div>
+            <div class="sheet-body">
+                <label class="shipping-card"><input type="radio" name="payment" value="qris" checked><div class="shipping-content"><span class="kurir-name">QRIS (OVO, Dana, GoPay)</span><i class="fas fa-qrcode"></i></div></label>
+                <label class="shipping-card"><input type="radio" name="payment" value="bca"><div class="shipping-content"><span class="kurir-name">BCA Virtual Account</span><i class="fas fa-university"></i></div></label>
+            </div>
+        </div>
+    </div>
+
+   
     <script src="script.js" defer></script>
 </body>
 </html>

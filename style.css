@@ -7,6 +7,7 @@
     --primary-hover: #E6A600;  /* Kuning sedikit lebih gelap untuk efek hover tombol */
     --bg-white: #FFFFFF;
     --bg-light: #FAFBFC;       /* Putih sedikit abu untuk variasi background section */
+    --bg-kuning-tai:#f8db90;
     
     /* Warna Teks */
     --text-dark: #2D3142;      /* Abu-abu sangat gelap (lebih lembut dari hitam pekat) */
@@ -1611,85 +1612,91 @@ section {
 }
 
 /* =========================================
-   29. CHECKOUT PAGE LAYOUT
+   29. TIKTOK-STYLE CHECKOUT UI
    ========================================= */
-/* Memastikan background halaman sedikit lebih gelap agar form putih menonjol */
-body.bg-light {
-    background-color: #F9FAFB; 
-}
+   body { background-color: #fefefe; } /* Warna latar belakang netral ala TikTok */
 
-.checkout-page {
-    padding: 3rem 0 5rem 0;
-}
-
-.checkout-grid {
-    display: grid;
-    /* Kolom kiri (Form) 60%, Kolom kanan (Summary) 40% */
-    grid-template-columns: 1.5fr 1fr; 
-    gap: 2.5rem;
-    align-items: start;
-}
-
+   .mobile-checkout-page {
+       padding: 10px 0 0 0;
+       max-width: 600px; /* Optimal untuk mobile, di desktop akan tertengah */
+       margin: 0 auto;
+   }
+   
+   .checkout-section {
+       background-color: var(--bg-white);
+       margin-bottom: 10px;
+       padding: 1.2rem 1.5rem;
+       position: relative;
+   }
+   
+   .section-title {
+       font-size: 1rem;
+       color: var(--text-dark);
+       margin-bottom: 0;
+   }
+   
+   /* Interaksi Kartu yang Bisa Diklik (Alamat, Pengiriman, Pembayaran) */
+   .clickable-card {
+       cursor: pointer;
+       transition: background-color 0.2s;
+   }
+   .clickable-card:active { background-color: #F9FAFB; }
+   
+   .flex-between {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+   }
+   
+   .arrow-icon {
+       color: #9CA3AF;
+       font-size: 0.9rem;
+       margin-left: 10px;
+   }
+   
+   .selected-text {
+       font-size: 0.85rem;
+       color: var(--text-muted);
+       margin-top: 5px;
+   }
+   
+   /* Gaya Khusus Area Alamat */
+   .empty-address-state {
+       display: flex; justify-content: space-between; align-items: center;
+       padding: 1rem; border: 1px dashed #D1D5DB; border-radius: var(--radius-md);
+       color: var(--text-dark); font-weight: 600; font-size: 0.95rem; margin-top: 1rem;
+   }
+   .filled-address-state {
+       margin-top: 1rem; padding-right: 20px;
+   }
+   .address-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; color: var(--text-dark);}
+   .address-detail { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+   
+   /* Sticky Peek Footer (Buat Pesanan) */
+   .mobile-checkout-footer {
+       position: fixed; bottom: 0; left: 0; width: 100%;
+       background-color: var(--bg-white);
+       display: flex; justify-content: space-between; align-items: center;
+       padding: 10px 1.5rem;
+       box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+       z-index: 900;
+   }
+   .mobile-checkout-footer .total-wrap { display: flex; flex-direction: column; }
+   .mobile-checkout-footer .label { font-size: 0.8rem; color: var(--text-muted); }
+   .mobile-checkout-footer .price { font-size: 1.25rem; font-weight: 700; color: #EF4444; } /* Warna merah a la Tokopedia/TikTok */
+   .btn-place-order { padding: 0.8rem 2rem; border-radius: 30px; } /* Tombol kapsul panjang */
+   
 /* =========================================
-   30. CHECKOUT BOXES & FORMS
+   FIX: TINGGI PANEL (EXPANDED STATE)
    ========================================= */
-.checkout-box, .summary-box {
-    background-color: var(--bg-white);
-    border-radius: var(--radius-lg);
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    margin-bottom: 2rem;
-    border: 1px solid #F3F4F6;
+/* Default untuk semua panel saat terbuka (Store Mini Cart, Kurir, Pembayaran) */
+.bottom-sheet-container.expanded .sheet-panel {
+    max-height: 60vh; 
 }
 
-.box-title {
-    font-size: 1.25rem;
-    font-family: var(--font-heading);
-    color: var(--text-dark);
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.8rem;
-    border-bottom: 2px solid #F3F4F6;
-}
-
-/* Grid untuk form berdampingan (seperti Provinsi & Kota) */
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
-/* Styling tambahan khusus elemen <select> dropdown */
-.input-group select {
-    width: 100%;
-    padding: 1rem;
-    border: 1px solid #E5E7EB;
-    border-radius: var(--radius-md);
-    font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--text-dark);
-    background-color: var(--bg-light);
-    transition: var(--transition);
-    outline: none;
-    cursor: pointer;
-    /* Menghilangkan panah bawaan browser yang jelek (opsional) */
-    appearance: none; 
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1em;
-}
-
-.input-group select:focus {
-    background-color: var(--bg-white);
-    border-color: var(--primary-yellow);
-    box-shadow: 0 0 0 4px rgba(255, 184, 0, 0.15);
-}
-
-/* Styling ketika select di-disable (belum boleh dipilih) */
-.input-group select:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background-color: #E5E7EB;
+/* KHUSUS untuk panel Form Alamat di Checkout yang isinya sangat panjang */
+#sheetAddress.expanded .sheet-panel { 
+    max-height: 85vh; 
 }
 
 /* =========================================
@@ -1960,9 +1967,9 @@ body.bg-light {
     transition: max-height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* State 2: Ekspansi Panel (Buka tinggi panel hingga 60% layar) */
-.bottom-sheet-container.expanded .sheet-panel {
-    max-height: 60vh; 
+/* FIX: Menarik Bottom Sheet ke atas saat class 'expanded' aktif */
+.bottom-sheet-container.expanded {
+    transform: translateY(0) !important; 
 }
 
 .sheet-header {
@@ -1997,6 +2004,216 @@ body.bg-light {
 .sticky-price-wrap .price { font-size: 1.3rem; font-weight: 700; color: var(--primary-yellow); font-family: var(--font-heading); }
 .btn-checkout-nav { padding: 0.8rem 1.5rem; border-radius: var(--radius-md); text-decoration: none; }
 
+/* =========================================
+   PERBAIKAN: TAMPILAN DESKTOP (PC/LAPTOP)
+   ========================================= */
+   @media (min-width: 992px) {
+    /* 1. Sembunyikan KHUSUS Mini Cart Store di Desktop */
+    #bottomSheetCart, #cartOverlay { 
+        display: none !important; 
+    }
+    
+    /* 2. Tata Letak Split-Screen untuk Halaman Checkout */
+    .mobile-checkout-page {
+        max-width: 1000px;
+        display: grid;
+        grid-template-columns: 1.5fr 1fr; /* Kiri lebih lebar dari kanan */
+        gap: 2rem;
+        align-items: start;
+        padding-top: 2rem;
+    }
+
+    /* KEAJAIBAN CSS: Menyusun ulang urutan kotak HTML tanpa menyentuh HTML-nya! */
+    .mobile-checkout-page section:nth-of-type(1) { grid-column: 1; grid-row: 1; } /* Alamat di Kiri Atas */
+    .mobile-checkout-page section:nth-of-type(3) { grid-column: 1; grid-row: 2; } /* Kurir di Kiri Tengah */
+    .mobile-checkout-page section:nth-of-type(4) { grid-column: 1; grid-row: 3; } /* Pembayaran di Kiri Bawah */
+    
+    .mobile-checkout-page section:nth-of-type(2) { grid-column: 2; grid-row: 1; } /* Ringkasan Item di Kanan Atas */
+    .mobile-checkout-page section:nth-of-type(5) { grid-column: 2; grid-row: 2; } /* Rincian Biaya di Kanan Tengah */
+
+    /* 3. Modifikasi Sticky Footer menjadi Tombol Desktop Biasa */
+    .mobile-checkout-footer {
+        position: static;
+        grid-column: 2;
+        grid-row: 3;
+        display: block;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    
+    /* Sembunyikan tulisan Total di tombol karena sudah ada di Rincian Biaya */
+    .mobile-checkout-footer .total-wrap { 
+        display: none; 
+    }
+    
+    .btn-place-order {
+        width: 100%;
+        padding: 1.2rem;
+        font-size: 1.1rem;
+        border-radius: var(--radius-md);
+    }
+    
+    /* 4. Ubah Bottom Sheet menjadi Pop-up Modal (Melayang di tengah layar) */
+    .bottom-sheet-container:not(#bottomSheetCart) {
+        width: 500px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        bottom: auto;
+        border-radius: var(--radius-lg);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .bottom-sheet-container.expanded:not(#bottomSheetCart) {
+        transform: translate(-50%, -50%) scale(1) !important;
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* =========================================
+   34. BITESHIP AUTOCOMPLETE UI (CHECKOUT)
+   ========================================= */
+   .autocomplete-list {
+    position: absolute;
+    top: 100%; /* Menempel pas di bawah kotak input */
+    left: 0;
+    right: 0;
+    background-color: var(--bg-white);
+    border: 1px solid #E5E7EB;
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    max-height: 250px; /* Maksimal tinggi sebelum bisa di-scroll */
+    overflow-y: auto;
+    z-index: 100; /* Agar melayang di atas elemen lain */
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: none; /* Sembunyi secara default */
+}
+
+/* Class untuk memunculkan daftar */
+.autocomplete-list.active {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+.autocomplete-item {
+    padding: 1rem;
+    border-bottom: 1px solid #F3F4F6;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: left;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background-color: rgba(255, 184, 0, 0.05); /* Efek kuning tipis saat di-hover */
+}
+
+.area-name {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.2rem;
+    font-size: 0.95rem;
+}
+
+.area-detail {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Posisi Ikon Loading berputar di dalam kotak input */
+.search-loading {
+    position: absolute;
+    right: 15px;
+    top: 45px; 
+    color: var(--primary-yellow);
+    font-size: 1.1rem;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   35. UI ITEM KERANJANG CHECKOUT (MOBILE & DESKTOP)
+   ========================================= */
+   .checkout-item-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px dashed #E5E7EB;
+    gap: 1rem; /* Jarak aman antara info dan tombol */
+}
+
+.item-info-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Memakan sisa ruang agar tombol terdorong ke kanan */
+}
+
+.item-title { font-weight: 600; font-size: 0.95rem; color: var(--text-dark); margin-bottom: 2px; line-height: 1.3; }
+.item-variant { font-size: 0.8rem; color: #6B7280; margin-bottom: 6px; }
+.item-price-checkout { font-weight: 700; color: var(--primary-yellow); font-size: 1rem; }
+
+/* Area Tombol Edit ala TikTok Shop */
+.item-action-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Merata kanan */
+    gap: 10px;
+}
+
+.qty-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #F3F4F6;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.qty-btn-small {
+    width: 28px; height: 28px;
+    background-color: var(--bg-white);
+    border: 1px solid #E5E7EB; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dark); cursor: pointer;
+    transition: all 0.2s;
+}
+
+.qty-btn-small:active { background-color: #E5E7EB; }
+.qty-text { font-weight: 600; font-size: 0.9rem; min-width: 20px; text-align: center; }
+.btn-remove-checkout { background: none; border: none; color: #EF4444; font-size: 1.1rem; cursor: pointer; padding: 4px; transition: 0.2s;}
+.btn-remove-checkout:hover { color: #B91C1C; transform: scale(1.1); }
+
+/* =========================================
+   PERBAIKAN TAMBAHAN: DESKTOP MODE
+   ========================================= */
 @media (min-width: 992px) {
-    .bottom-sheet-container, .cart-overlay { display: none !important; }
+    /* Mencegah form Alamat melar terlalu panjang secara vertikal di Desktop */
+    .bottom-sheet-container:not(#bottomSheetCart) .sheet-panel {
+        height: auto; 
+        max-height: 100vh;
+        border-radius: 20px 20px 20px 20px;
+    }
+
+    /* Penyesuaian akhir tombol Buat Pesanan di Desktop */
+    .mobile-checkout-footer {
+        margin-top: 1rem; /* Beri jarak dengan rincian biaya */
+        padding: 0;
+    }
 }
