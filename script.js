@@ -429,7 +429,7 @@ if (checkoutPage) {
     // Variabel Kalkulasi Global
     let subtotalAmount = 0;
     let ongkirAmount = 0;
-    let adminFee = 2500; // Biaya layanan statis
+    let adminFee = 500; // Ubah dari 2500 menjadi 0 (karena menunggu user milih)
 
     // Format Rupiah
     function formatRupiahCheckout(number) {
@@ -547,140 +547,495 @@ if (checkoutPage) {
     overlay.addEventListener('click', closeAllSheets);
 
 
-    // --- C. LOGIKA BITESHIP AUTOCOMPLETE (DI DALAM SHEET ALAMAT) ---
-    const areaSearch = document.getElementById('areaSearch');
-    const areaList = document.getElementById('areaList');
+    // --- C & D. LOGIKA PENCARIAN ALAMAT & LOCAL STORAGE CACHE ---
+    const BITESHIP_API_KEY = 'biteship_test.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoia3J1cHVrbWllLiIsInVzZXJJZCI6IjY5YWQzOTdmMjZiMDY3YzIzZDIxNGQ5MiIsImlhdCI6MTc3Mjk2MDM2OX0.VMLO13dSbYr-MZSQHvwzmBrDuE483zdazn2KCDwi-_Y';
+    
+    const btnTriggerLocationSheet = document.getElementById('btnTriggerLocationSheet');
+    const textSelectedLocation = document.getElementById('textSelectedLocation');
     const biteshipAreaId = document.getElementById('biteshipAreaId');
-    const kodeposInput = document.getElementById('kodepos');
-    let debounceTimer;
+    const kodeposHidden = document.getElementById('kodeposHidden');
+    const inputSearchLocation = document.getElementById('inputSearchLocation');
+    const locationResultsList = document.getElementById('locationResultsList');
 
-    areaSearch.addEventListener('input', function() {
-        const query = this.value.trim();
-        clearTimeout(debounceTimer);
+    // 1. CEK CACHE ALAMAT SAAT HALAMAN DIMUAT
+    const cachedAddress = JSON.parse(localStorage.getItem('krupukmie_user_address'));
+    if (cachedAddress) {
+        // Isi otomatis form di belakang layar
+        document.getElementById('fullname').value = cachedAddress.name;
+        document.getElementById('phone').value = cachedAddress.phone;
+        document.getElementById('alamatLengkap').value = cachedAddress.addressDetail;
+        biteshipAreaId.value = cachedAddress.areaId;
+        kodeposHidden.value = cachedAddress.postalCode;
+        textSelectedLocation.textContent = cachedAddress.areaName;
+        textSelectedLocation.style.color = '#1F2937';
 
-        if (query.length < 3) {
-            areaList.classList.remove('active');
-            biteshipAreaId.value = '';
-            kodeposInput.value = '';
-            return;
-        }
+        // Tampilkan langsung di kartu layar utama
+        document.getElementById('emptyAddressState').style.display = 'none';
+        document.getElementById('filledAddressState').style.display = 'block';
+        document.getElementById('displayCustName').textContent = `${cachedAddress.name} | ${cachedAddress.phone}`;
+        document.getElementById('displayCustAddress').textContent = `${cachedAddress.addressDetail}, ${cachedAddress.areaName} (${cachedAddress.postalCode})`;
+        
+        // Buka Kunci Kurir
+        document.getElementById('btnOpenShipping').style.opacity = '1';
+        document.getElementById('btnOpenShipping').style.pointerEvents = 'auto';
+        fetchShippingRates(cachedAddress.areaId, cachedAddress.postalCode);
+    }
 
-        document.getElementById('searchLoading').style.display = 'block';
-
-        debounceTimer = setTimeout(() => {
-            // Simulasi API Biteship
-            const mockData = [
-                { id: 'ID123', name: `${query}`, detail: 'Kab. Tegal, Jawa Tengah', postal: '52194' },
-                { id: 'ID124', name: `${query} Barat`, detail: 'Kab. Tegal, Jawa Tengah', postal: '52195' }
-            ];
-            
-            areaList.innerHTML = '';
-            mockData.forEach(area => {
-                const li = document.createElement('li');
-                li.className = 'autocomplete-item';
-                li.innerHTML = `<span class="area-name">Kecamatan ${area.name}</span><span class="area-detail">${area.detail}, ${area.postal}</span>`;
-                li.addEventListener('click', () => {
-                    areaSearch.value = `Kecamatan ${area.name}, ${area.detail}`;
-                    biteshipAreaId.value = area.id;
-                    kodeposInput.value = area.postal;
-                    areaList.classList.remove('active');
-                });
-                areaList.appendChild(li);
-            });
-            areaList.classList.add('active');
-            document.getElementById('searchLoading').style.display = 'none';
-        }, 800);
+    // 2. NAVIGASI ANTAR SHEET ALAMAT & LOKASI
+    btnTriggerLocationSheet.addEventListener('click', () => {
+        document.getElementById('sheetLocation').classList.add('expanded');
     });
 
+    document.getElementById('btnBackToAddress').addEventListener('click', () => {
+        document.getElementById('sheetLocation').classList.remove('expanded');
+    });
 
-    // --- D. LOGIKA SIMPAN ALAMAT & BUKA KUNCI KURIR ---
-    document.getElementById('btnSaveAddress').addEventListener('click', function() {
-        const fullname = document.getElementById('fullname').value;
-        const phone = document.getElementById('phone').value;
-        const areaId = biteshipAreaId.value;
-        const alamatLengkap = document.getElementById('alamatLengkap').value;
+    // --- 3. LOGIKA PENCARIAN SHOPEE STYLE & GPS ---
+    const btnCurrentLocation = document.getElementById('btnCurrentLocation');
+    const gpsBtnText = document.getElementById('gpsBtnText');
+    const dynamicRegionList = document.getElementById('dynamicRegionList');
+    const locationTracker = document.getElementById('locationTracker');
+    const breadcrumbList = document.getElementById('breadcrumbList');
+    const btnResetLocation = document.getElementById('btnResetLocation');
 
-        // Validasi Form Dasar
-        if (!fullname || !phone || !areaId || !alamatLengkap) {
-            alert('Mohon lengkapi semua data alamat dan pilih kecamatan dari saran yang muncul.');
+    // Variabel state untuk melacak hierarki (Shopee style)
+    let currentRegionState = 'province'; // province -> regency -> district
+    let selectedProvince = '';
+    let selectedRegency = '';
+
+    // A. FITUR GPS (REVERSE GEOCODING)
+    btnCurrentLocation.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+            alert("Browser Anda tidak mendukung fitur lokasi GPS.");
             return;
         }
 
-        // 1. Ubah Tampilan Kartu Alamat di Layar Utama
+        gpsBtnText.textContent = "Mencari koordinat Anda...";
+        btnCurrentLocation.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    gpsBtnText.textContent = "Menerjemahkan alamat...";
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                    const data = await response.json();
+                    const address = data.address;
+                    
+                    // PERBAIKAN: Prioritaskan Kode Pos, baru Kecamatan (city_district), baru Kota
+                    const queryForBiteship = address.postcode || address.city_district || address.town || address.city;
+                    
+                    if(queryForBiteship) {
+                        inputSearchLocation.value = queryForBiteship; // Tampilkan di kotak pencarian
+                        searchBiteshipDirectly(queryForBiteship);     // Tembak Biteship pakai Kodepos/Kecamatan
+                    } else {
+                        alert("Gagal mendeteksi area Anda. Silakan cari manual.");
+                    }
+                } catch (error) {
+                    alert("Koneksi gagal saat menerjemahkan lokasi.");
+                } finally {
+                    resetGpsButton();
+                }
+            },
+            (error) => {
+                resetGpsButton();
+                if (error.code === 1) {
+                    alert("Akses Lokasi Ditolak 🔒\n\nKami butuh izin untuk menemukan Anda. Silakan klik ikon gembok 🔒 di pojok kiri atas browser, lalu pilih 'Izinkan Lokasi', dan muat ulang halaman.");
+                } else {
+                    alert("Sinyal GPS lemah. Silakan ketik nama kecamatan Anda.");
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    });
+
+    function resetGpsButton() {
+        gpsBtnText.textContent = "Gunakan Lokasi Saat Ini";
+        btnCurrentLocation.disabled = false;
+    }
+
+
+    // B. FITUR HIERARKI LOKASI (PROVINSI -> KOTA -> KECAMATAN)
+    const wilayahApiUrl = 'https://www.emsifa.com/api-wilayah-indonesia/api';
+    async function loadProvinces() {
+        dynamicRegionList.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Memuat Provinsi...</p>';
+        try {
+            const res = await fetch(`${wilayahApiUrl}/provinces.json`);
+            const provinces = await res.json();
+            renderList(provinces, 'regency', 'Pilih Provinsi');
+        } catch (e) {
+            dynamicRegionList.innerHTML = '<p style="text-align:center; color:red;">Gagal memuat data wilayah.</p>';
+        }
+    }
+
+    async function loadRegencies(provinceId, provinceName) {
+        selectedProvince = provinceName;
+        updateBreadcrumb(provinceName, false);
+        dynamicRegionList.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Memuat Kota/Kabupaten...</p>';
+        try {
+            const res = await fetch(`${wilayahApiUrl}/regencies/${provinceId}.json`);
+            const regencies = await res.json();
+            renderList(regencies, 'district', 'Pilih Kota/Kabupaten');
+        } catch (e) {}
+    }
+
+    async function loadDistricts(regencyId, regencyName) {
+        selectedRegency = regencyName;
+        updateBreadcrumb(regencyName, false);
+        dynamicRegionList.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Memuat Kecamatan...</p>';
+        try {
+            const res = await fetch(`${wilayahApiUrl}/districts/${regencyId}.json`);
+            const districts = await res.json();
+            renderList(districts, 'biteship', 'Pilih Kecamatan');
+        } catch (e) {}
+    }
+
+    // Fungsi menggambar daftar list untuk diklik
+    function renderList(dataArray, nextStep, placeholderText) {
+        dynamicRegionList.innerHTML = `<p style="font-size: 0.8rem; color: #9CA3AF; margin: 10px 0;">${placeholderText}</p>`;
+        dataArray.forEach(item => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 15px 0; border-bottom: 1px solid #E5E7EB; cursor: pointer; color: #1F2937; font-size: 0.95rem; text-transform: capitalize;';
+            div.innerHTML = item.name.toLowerCase();
+            
+            div.addEventListener('click', () => {
+                if (nextStep === 'regency') loadRegencies(item.id, item.name);
+                else if (nextStep === 'district') loadDistricts(item.id, item.name);
+                else if (nextStep === 'biteship') {
+                    updateBreadcrumb(item.name, true);
+                    searchBiteshipDirectly(`${item.name}, ${selectedRegency}`);
+                }
+            });
+            dynamicRegionList.appendChild(div);
+        });
+    }
+
+    // Fungsi merender riwayat (Lokasi Terpilih) ala Shopee
+    function updateBreadcrumb(name, isLast) {
+        locationTracker.style.display = 'block';
+        const li = document.createElement('li');
+        li.style.cssText = `position: relative; padding-bottom: 15px; padding-left: 20px; font-size: 0.9rem; text-transform: capitalize; color: ${isLast ? '#EF4444' : '#6B7280'}; font-weight: ${isLast ? '600' : '400'};`;
+        
+        // Buat bulatan merah ala Shopee
+        const dot = document.createElement('div');
+        dot.style.cssText = `position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: ${isLast ? '#EF4444' : '#D1D5DB'}; border: 2px solid #fff;`;
+        
+        li.appendChild(dot);
+        li.appendChild(document.createTextNode(name.toLowerCase()));
+        breadcrumbList.appendChild(li);
+    }
+
+    // Reset UI kembali ke pilih provinsi
+    btnResetLocation.addEventListener('click', () => {
+        breadcrumbList.innerHTML = '';
+        locationTracker.style.display = 'none';
+        loadProvinces();
+    });
+
+    // C. PENCARIAN MANUAL (KETIK) -> TETAP MENGGUNAKAN BITESHIP API
+    let searchTimeout;
+    inputSearchLocation.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        // FITUR BARU: Jika kotak pencarian dikosongkan (dihapus semua)
+        if (query.length <= 2) {
+            // Reset dan kembalikan ke tampilan Hierarki (Provinsi)
+            breadcrumbList.innerHTML = '';
+            locationTracker.style.display = 'none';
+            loadProvinces();
+            return;
+        }
+
+        // Jika baru ngetik 1-2 huruf, suruh lanjut ngetik
+        if (query.length < 3) {
+            dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #9CA3AF; font-size: 0.9rem;">Ketik minimal 3 huruf untuk mencari...</div>';
+            return; 
+        }
+
+        // Jika sudah 3 huruf atau lebih, sembunyikan hierarki dan mulai mencari ke Biteship
+        locationTracker.style.display = 'none'; 
+        dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6B7280;"><i class="fas fa-spinner fa-spin"></i> Mencari area pengiriman...</div>';
+        
+        searchTimeout = setTimeout(() => { searchBiteshipDirectly(query); }, 600);
+    });
+
+    // D. FUNGSI FINAL: JEMBATAN KE BITESHIP
+    async function searchBiteshipDirectly(query) {
+        dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6B7280;"><i class="fas fa-spinner fa-spin"></i> Memverifikasi dengan Kurir...</div>';
+        try {
+            const response = await fetch(`https://api.biteship.com/v1/maps/areas?countries=ID&input=${encodeURIComponent(query)}`, {
+                headers: { 'Authorization': BITESHIP_API_KEY }
+            });
+            const data = await response.json();
+            
+            if (data.success && data.areas.length > 0) {
+                dynamicRegionList.innerHTML = '';
+                data.areas.forEach(area => {
+                    const li = document.createElement('div');
+                    li.style.cssText = 'padding: 15px 0; border-bottom: 1px solid #E5E7EB; cursor: pointer; display: flex; flex-direction: column; gap: 4px;';
+                    
+                    // --- ALGORITMA PEMBERSIH TEKS BITESHIP ---
+                    let namaKecamatan = area.name;
+                    let detailWilayah = `${area.administrative_division_level_2_name || ''}, ${area.administrative_division_level_1_name || ''}`.replace(/^,\s*|,\s*$/g, '');
+                    let kodeposAsli = area.postal_code;
+
+                    // Jika Biteship membandel dan mengirimkan 1 kalimat super panjang (mengandung koma)
+                    if (area.name.includes(',')) {
+                        let pecah = area.name.split(',');
+                        namaKecamatan = pecah[0].trim(); // Ambil nama depannya saja (Kecamatannya)
+                        detailWilayah = pecah.slice(1).join(',').trim(); // Sisanya (Kota, Provinsi, dll) turunkan ke bawah
+                        
+                        // Jika ternyata kodeposnya kosong/null, coba kita cari angka 5 digit di dalam teks panjangnya
+                        if (!kodeposAsli) {
+                            let cariAngka = detailWilayah.match(/\d{5}/);
+                            if (cariAngka) kodeposAsli = cariAngka[0];
+                        }
+                    }
+                    
+                    // Sembunyikan tulisan "Kode Pos:" jika memang datanya tidak ada
+                    let htmlKodepos = kodeposAsli ? `<span style="font-size: 0.75rem; color: #9CA3AF;">Kode Pos: ${kodeposAsli}</span>` : '';
+
+                    li.innerHTML = `
+                        <strong style="font-size: 0.95rem; color: #1F2937;">${namaKecamatan}</strong>
+                        <span style="font-size: 0.8rem; color: #6B7280;">${detailWilayah}</span>
+                        ${htmlKodepos}
+                    `;
+                    
+                    li.addEventListener('click', () => {
+                        biteshipAreaId.value = area.id;
+                        kodeposHidden.value = kodeposAsli || '';
+                        
+                        // Tampilkan di UI utama (Contoh: Adiwerna, Kab. Tegal)
+                        const namaKota = area.administrative_division_level_2_name || detailWilayah.split(',')[0];
+                        textSelectedLocation.textContent = `${namaKecamatan}, ${namaKota}`;
+                        textSelectedLocation.style.color = '#1F2937';
+                        
+                        document.getElementById('sheetLocation').classList.remove('expanded');
+                    });
+                    dynamicRegionList.appendChild(li);
+                });
+            } else {
+                dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #EF4444;">Area ini belum terjangkau kurir.</div>';
+            }
+        } catch (error) {
+            dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #EF4444;">Koneksi terputus.</div>';
+        }
+    }
+    // Panggil Provinsi saat sheet lokasi pertama kali dibuka
+    document.getElementById('btnTriggerLocationSheet').addEventListener('click', () => {
+        document.getElementById('sheetLocation').classList.add('expanded');
+        
+        // PERBAIKAN: Cek apakah tidak ada elemen <li> di dalamnya, bukan mengecek string kosong
+        if(breadcrumbList.children.length === 0) {
+            loadProvinces(); 
+        }
+    });
+
+    // 4. SIMPAN DATA ALAMAT & MASUKKAN KE CACHE
+    document.getElementById('btnSaveAddress').addEventListener('click', function() {
+        const fullname = document.getElementById('fullname').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const areaId = biteshipAreaId.value;
+        const postalCode = kodeposHidden.value;
+        const areaName = textSelectedLocation.textContent;
+        const addressDetail = document.getElementById('alamatLengkap').value.trim();
+
+        if (!fullname || !phone || !areaId || !addressDetail) {
+            alert('Mohon lengkapi data, termasuk memilih Kecamatan dari fitur pencarian.');
+            return;
+        }
+
+        // Simpan ke Cache Browser (LocalStorage)
+        const addressData = {
+            name: fullname, phone: phone, areaId: areaId, 
+            postalCode: postalCode, areaName: areaName, addressDetail: addressDetail
+        };
+        localStorage.setItem('krupukmie_user_address', JSON.stringify(addressData));
+
+        // Update UI Utama
         document.getElementById('emptyAddressState').style.display = 'none';
         document.getElementById('filledAddressState').style.display = 'block';
         document.getElementById('displayCustName').textContent = `${fullname} | ${phone}`;
-        document.getElementById('displayCustAddress').textContent = `${alamatLengkap}, ${areaSearch.value} (${kodeposInput.value})`;
+        document.getElementById('displayCustAddress').textContent = `${addressDetail}, ${areaName} (${postalCode})`;
 
-        // 2. Buka Kunci Kartu Opsi Pengiriman!
+        // Buka Kunci Opsi Pengiriman
         const btnShipping = document.getElementById('btnOpenShipping');
         btnShipping.style.opacity = '1';
         btnShipping.style.pointerEvents = 'auto';
 
-        // 3. Tutup Sheet Alamat
         closeAllSheets();
 
-        // 4. Otomatis Cari Ongkir berdasarkan Area ID baru
-        fetchShippingRates(areaId);
+        // Kosongkan Pilihan Kurir Lama agar user disuruh milih ulang jika ganti alamat
+        document.getElementById('displayShipping').textContent = 'Pilih Opsi Pengiriman';
+        document.getElementById('displayShippingCost').textContent = 'Rp 0';
+        ongkirAmount = 0;
+        updateGrandTotal();
+        
+        // Panggil Tarik Ongkir (Akan kita kerjakan di Tahap 2)
+        fetchShippingRates(areaId, postalCode);
+
+
     });
 
-
-    // --- E. LOGIKA OPSI PENGIRIMAN & UPDATE TOTAL ---
-    function fetchShippingRates(areaId) {
+    
+    // --- E. LOGIKA OPSI PENGIRIMAN DINAMIS (BITESHIP RATES API) ---
+    async function fetchShippingRates(areaId, postalCode) {
         const container = document.getElementById('shippingOptionsContainer');
-        container.innerHTML = `<p style="text-align: center; padding: 2rem 0;"><i class="fas fa-spinner fa-spin"></i> Mencari kurir terbaik...</p>`;
-        
-        // Simulasi hitung ongkir
-        setTimeout(() => {
-            const mockRates = [
-                { id: 'jne-reg', name: 'JNE Reguler', duration: '2-3 Hari', price: 15000 },
-                { id: 'sicepat-halu', name: 'SiCepat Halu', duration: '2-4 Hari', price: 12500 }
-            ];
+        container.innerHTML = `<p style="text-align: center; padding: 2rem 0; color: #6B7280;"><i class="fas fa-spinner fa-spin"></i> Menghitung ongkir terbaik...</p>`;
 
-            let html = '';
-            mockRates.forEach((rate, index) => {
-                html += `
-                    <label class="shipping-card" style="display: block; margin-bottom: 10px; cursor: pointer;">
-                        <input type="radio" name="kurirRadio" value="${rate.id}" data-name="${rate.name}" data-price="${rate.price}" style="display: none;">
-                        <div class="shipping-content" style="padding: 1rem; border: 1px solid #E5E7EB; border-radius: 8px; display: flex; justify-content: space-between;">
-                            <div><strong style="display: block;">${rate.name}</strong><span style="font-size: 0.8rem; color: #6B7280;">Estimasi ${rate.duration}</span></div>
-                            <strong style="color: var(--primary-yellow);">${formatRupiahCheckout(rate.price)}</strong>
-                        </div>
-                    </label>
-                `;
+        // 1. HITUNG BERAT KERANJANG OTOMATIS
+        let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
+        let totalWeightGram = 0;
+        let totalValue = 0;
+
+        cart.forEach(item => {
+            // Logika Pendeteksi Berat: (Bisa Anda sesuaikan dengan nama varian Anda)
+            let itemWeight = 500; // Default 500 gram
+            if (item.variant && item.variant.includes('1kg')) itemWeight = 1000;
+            else if (item.variant && item.variant.includes('500g')) itemWeight = 500;
+            else if (item.variant && item.variant.includes('250g')) itemWeight = 250;
+            
+            totalWeightGram += (itemWeight * item.qty);
+            totalValue += item.total; // Total harga barang untuk asuransi (opsional)
+        });
+
+        // Ekspedisi biasanya menetapkan berat minimal 1 kg (1000 gram)
+        if (totalWeightGram < 1000) totalWeightGram = 1000;
+
+        // 2. SIAPKAN DATA UNTUK BITESHIP (KODE POS + BANYAK KURIR)
+        const payload = {
+            origin_postal_code: 52194, 
+            destination_postal_code: parseInt(postalCode), 
+            
+            // PERBAIKAN 1: Panggil semua kurir ekspedisi standar yang sudah Anda On-kan
+            // (Kita kecualikan kurir instan seperti gojek/grab dulu karena butuh koordinat lat/long)
+            couriers: "jne,sicepat,jnt,idexpress,tiki,ninja,lion,anteraja,pos,wahana,rpx,sap", 
+            
+            items: [
+                {
+                    name: "Pesanan KrupukMie",
+                    description: "Makanan ringan",
+                    value: parseInt(totalValue) || 15000, 
+                    length: 15, width: 15, height: 10,
+                    weight: parseInt(totalWeightGram),
+                    quantity: 1
+                }
+            ]
+        };
+
+        try {
+            const response = await fetch("https://api.biteship.com/v1/rates/couriers", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": BITESHIP_API_KEY
+                },
+                body: JSON.stringify(payload)
             });
-            container.innerHTML = html;
 
-            // Tambahkan event click pada setiap kurir di dalam sheet
-            const kurirRadios = container.querySelectorAll('input[name="kurirRadio"]');
-            kurirRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    // Update UI di layar utama
-                    document.getElementById('displayShipping').textContent = this.getAttribute('data-name');
-                    document.getElementById('displayShippingCost').textContent = formatRupiahCheckout(this.getAttribute('data-price'));
-                    
-                    // Update Kalkulasi
-                    ongkirAmount = parseInt(this.getAttribute('data-price'));
-                    updateGrandTotal();
-                    
-                    // Tutup sheet setelah memilih
-                    setTimeout(closeAllSheets, 300);
+            const data = await response.json();
+
+            // 4. TAMPILKAN HASIL KE LAYAR
+            if (data.success && data.pricing.length > 0) {
+                
+                // ========================================================
+                // PERBAIKAN 2: URUTKAN HARGA DARI YANG TERMURAH!
+                // ========================================================
+                data.pricing.sort((a, b) => a.price - b.price);
+
+                let html = `<div style="background: #ECFDF5; border: 1px solid #10B981; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; color: #047857; font-size: 0.85rem; font-weight: 600;">
+                                <i class="fas fa-balance-scale"></i> Total Berat Paket: ${(totalWeightGram/1000).toFixed(1)} kg
+                            </div>`;
+                
+                data.pricing.forEach((rate, index) => {
+                    // Karena array sudah diurutkan, index 0 PASTI harga yang paling murah se-Indonesia!
+                    const isCheapest = index === 0;
+                    const badgeHtml = isCheapest ? `<span style="background: #FEF3C7; color: #D97706; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 8px; vertical-align: middle;">TERMURAH</span>` : '';
+
+                    html += `
+                        <label class="shipping-card" style="display: block; margin-bottom: 12px; cursor: pointer;">
+                            <input type="radio" name="kurirRadio" value="${rate.company}-${rate.type}" data-name="${rate.courier_name} ${rate.courier_service_name}" data-price="${rate.price}" style="display: none;">
+                            <div class="shipping-content" style="padding: 1rem; border: 1px solid ${isCheapest ? '#F59E0B' : '#E5E7EB'}; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background: ${isCheapest ? '#FFFBEB' : '#fff'}; transition: 0.2s;">
+                                <div>
+                                    <strong style="display: block; color: #1F2937; font-size: 0.95rem; text-transform: uppercase;">${rate.company} - ${rate.type} ${badgeHtml}</strong>
+                                    <span style="font-size: 0.75rem; color: #6B7280; display: block; margin-top: 2px;">Estimasi ${rate.duration}</span>
+                                    <span style="font-size: 0.7rem; color: #9CA3AF; display: block;">${rate.description || 'Layanan Reguler'}</span>
+                                </div>
+                                <strong style="color: #EF4444; font-size: 1rem;">${formatRupiahCheckout(rate.price)}</strong>
+                            </div>
+                        </label>
+                    `;
                 });
-            });
+                
+                container.innerHTML = html;
 
-        }, 1000);
+                // 5. PASANG AKSI SAAT KURIR DIPILIH OLEH PEMBELI
+                const kurirRadios = container.querySelectorAll('input[name="kurirRadio"]');
+                kurirRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        const namaKurir = this.getAttribute('data-name');
+                        const hargaOngkir = parseInt(this.getAttribute('data-price'));
+                        
+                        document.getElementById('displayShipping').innerHTML = `<strong style="color:#1F2937;">${this.value.toUpperCase()}</strong><br><span style="font-size:0.8rem; color:#6B7280;">${namaKurir}</span>`;
+                        document.getElementById('displayShippingCost').textContent = formatRupiahCheckout(hargaOngkir);
+                        
+                        ongkirAmount = hargaOngkir;
+                        updateGrandTotal();
+                        
+                        document.getElementById('sheetShipping').classList.remove('expanded');
+                        document.getElementById('checkoutOverlay').classList.remove('active');
+                    });
+                });
+
+            } else {
+                container.innerHTML = `<div style="padding: 20px; text-align: center; color: #EF4444; background: #FEF2F2; border-radius: 8px;">Maaf, rute ini belum didukung.</div>`;
+            }
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            container.innerHTML = `<div style="padding: 20px; text-align: center; color: #EF4444;">Gagal terhubung ke server ekspedisi.</div>`;
+        }
     }
 
-
-    // --- F. LOGIKA METODE PEMBAYARAN ---
+    // --- F. LOGIKA METODE PEMBAYARAN & ADMIN DINAMIS ---
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
     paymentRadios.forEach(radio => {
         radio.addEventListener('change', function() {
-            // Ambil nama kurir dari span terdekat
+            // 1. Update Teks di Layar Utama
             const paymentName = this.nextElementSibling.querySelector('.kurir-name').textContent;
             document.getElementById('displayPayment').textContent = paymentName;
             
-            // Tutup sheet setelah memilih
+            // 2. LOGIKA PERHITUNGAN BIAYA ADMIN
+            const method = this.value;
+            
+            // Kelompok Virtual Account (BCA, BNI, BRI, Mandiri, Permata) -> Rp 4.000 flat
+            if (['bca_va', 'bni_va', 'bri_va', 'permata_va', 'echannel'].includes(method)) {
+                adminFee = 4000;
+            } 
+            // Kelompok E-Wallet / QRIS -> Rp 1.500 flat
+            else if (['gopay', 'qris', 'shopeepay'].includes(method)) {
+                adminFee = 1500; 
+            } 
+            // Kelompok Gerai Retail (Indomaret, Alfamart) -> Midtrans biasanya potong Rp 5.000
+            else if (['indomaret', 'alfamart'].includes(method)) {
+                adminFee = 5000;
+            }
+            // Kelompok Kartu Kredit (Opsional jika Anda aktifkan nanti) -> Biasanya 3%
+            else if (method === 'credit_card') {
+                // Tampilkan sebagai persentase dari subtotal
+                adminFee = Math.round((subtotalAmount + ongkirAmount) * 0.03); 
+            }
+            // Default keamanan
+            else {
+                adminFee = 2500;
+            }
+
+            // 3. Update Angka di Rincian Pembayaran
+            updateGrandTotal();
+            
+            // 4. Tutup sheet dengan efek smooth
             setTimeout(closeAllSheets, 300);
         });
     });
@@ -796,5 +1151,114 @@ if (checkoutPage) {
             btnPlaceOrder.innerHTML = originalBtnText;
             btnPlaceOrder.disabled = false;
         }
+    });
+
+    
+}
+
+
+// --- KONFIGURASI BITESHIP ---
+// CATATAN: Untuk keamanan level produksi, API Key sebaiknya tidak ditaruh di Frontend. 
+// Namun untuk tahap ini, kita gunakan langsung agar UI berfungsi.
+const BITESHIP_API_KEY = 'biteship_test.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoia3J1cHVrbWllLiIsInVzZXJJZCI6IjY5YWQzOTdmMjZiMDY3YzIzZDIxNGQ5MiIsImlhdCI6MTc3Mjk2MDM2OX0.VMLO13dSbYr-MZSQHvwzmBrDuE483zdazn2KCDwi-_Y'; 
+
+// --- 1. LOCAL STORAGE (MENYIMPAN DATA SAAT REFRESH) ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Cek apakah ada data lokasi yang tersimpan sebelumnya
+    const savedLocation = localStorage.getItem('krupukmie_user_location');
+    if (savedLocation) {
+        const locData = JSON.parse(savedLocation);
+        document.getElementById('displayLocation').textContent = locData.name; // Ganti ID sesuai elemen UI Anda
+        document.getElementById('hiddenAreaId').value = locData.area_id;
+        document.getElementById('hiddenPostalCode').value = locData.postal_code;
+        
+        // Nanti di Tahap 2: Panggil fungsi cek ongkir di sini
+        // fetchShippingRates(locData.area_id); 
+    }
+});
+
+// --- 2. LOGIKA PENCARIAN LOKASI (SHOPEE STYLE) ---
+const inputSearch = document.getElementById('inputSearchLocation');
+const resultsList = document.getElementById('locationResultsList');
+let searchTimeout;
+
+inputSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+
+    if (query.length < 3) {
+        resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #9CA3AF; font-size: 0.9rem;">Ketik minimal 3 huruf...</div>';
+        return;
+    }
+
+    resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6B7280;"><i class="fas fa-spinner fa-spin"></i> Mencari lokasi...</div>';
+
+    // Jeda 500ms agar tidak membombardir server Biteship saat user mengetik cepat (Debounce)
+    searchTimeout = setTimeout(() => {
+        fetchBiteshipAreas(query);
+    }, 500);
+});
+
+// Fungsi memanggil API Maps Biteship
+async function fetchBiteshipAreas(query) {
+    try {
+        const response = await fetch(`https://api.biteship.com/v1/maps/areas?countries=ID&input=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: { 'Authorization': BITESHIP_API_KEY }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.areas.length > 0) {
+            renderLocationResults(data.areas);
+        } else {
+            resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #EF4444;">Lokasi tidak ditemukan. Coba kata kunci lain.</div>';
+        }
+    } catch (error) {
+        console.error('Error fetching areas:', error);
+        resultsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #EF4444;">Gagal menghubungi server. Periksa koneksi internet.</div>';
+    }
+}
+
+// Fungsi merender hasil pencarian ke dalam list HTML
+function renderLocationResults(areas) {
+    resultsList.innerHTML = ''; // Bersihkan loading
+    
+    areas.forEach(area => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding: 15px 0; border-bottom: 1px solid #E5E7EB; cursor: pointer; display: flex; flex-direction: column; gap: 4px;';
+        
+        // Tampilan Hierarki seperti gambar Anda (Adiwerna, Kab. Tegal, Jawa Tengah)
+        item.innerHTML = `
+            <strong style="font-size: 0.95rem; color: #1F2937;">${area.name}</strong>
+            <span style="font-size: 0.8rem; color: #6B7280;">${area.administrative_division_level_2_name}, ${area.administrative_division_level_1_name}</span>
+            <span style="font-size: 0.75rem; color: #9CA3AF;">Kode Pos: ${area.postal_code || '-'}</span>
+        `;
+        
+        // Saat lokasi diklik
+        item.addEventListener('click', () => {
+            // 1. Simpan ke Input Hidden Form
+            document.getElementById('hiddenAreaId').value = area.id;
+            document.getElementById('hiddenPostalCode').value = area.postal_code;
+            
+            // 2. Ubah Tampilan UI Utama
+            document.getElementById('displayLocation').textContent = `${area.name}, ${area.administrative_division_level_2_name}`;
+            
+            // 3. Simpan ke LocalStorage agar awet saat di-refresh
+            const locDataToSave = {
+                id: area.id, // Area ID khusus Biteship (Sangat Penting untuk Tahap 2!)
+                name: `${area.name}, ${area.administrative_division_level_2_name}`,
+                postal_code: area.postal_code
+            };
+            localStorage.setItem('krupukmie_user_location', JSON.stringify(locDataToSave));
+            
+            // 4. Tutup Sheet
+            closeAllSheets(); // Pastikan Anda punya fungsi ini dari kode sebelumnya
+            
+            // PANGGILAN RAHASIA TAHAP 2 (Mencari Ongkir)
+            // fetchDynamicRates(area.id, area.postal_code); 
+        });
+        
+        resultsList.appendChild(item);
     });
 }
