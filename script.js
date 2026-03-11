@@ -1255,38 +1255,39 @@ if (checkoutPage) {
                 openSheet('sheetPayment');
                 return;
             }
-        
+            
+                // ... (kode validasi ongkir & payment sebelumnya) ...
+
             let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
             
             // ==========================================
-            // OPTIMASI: PERHITUNGAN GRAND TOTAL AMAN DARI MESIN
+            // TARIK DATA ALAMAT DARI CACHE BROWSER
             // ==========================================
-            // Kita hitung harga asli barang dikali jumlahnya (qty) langsung dari database keranjang
+            const savedAddress = JSON.parse(localStorage.getItem('krupukmie_user_address')) || {};
+
             const safeSubtotal = cart.reduce((total, item) => total + (item.price * item.qty), 0);
-            const adminFee = 5000; // Pastikan ini sama dengan angka biaya admin di UI Anda
+            const adminFee = 5000;
             const safeGrandTotal = safeSubtotal + ongkirAmount + adminFee;
-        
-            // Ambil nama kurir dari layar
+
             const courierChoice = document.getElementById('displayShipping').innerText.replace(/\n/g, ' - ');
-            // Buat Invoice unik
             const invoiceNumber = 'INV-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-        
+
             const orderPayload = {
-                invoice_number: invoiceNumber, // Tambahkan ini agar Supabase punya referensi
+                invoice_number: invoiceNumber,
                 customer: {
-                    name: document.getElementById('fullname').value,
-                    phone: document.getElementById('phone').value,
+                    // Gunakan data dari Cache (savedAddress) sebagai prioritas utama
+                    name: savedAddress.name || document.getElementById('fullname').value,
+                    phone: savedAddress.phone || document.getElementById('phone').value,
                     email: 'customer@email.com',
-                    address: document.getElementById('addressDetail') ? document.getElementById('addressDetail').value : document.getElementById('alamatLengkap').value,
-                    area_id: document.getElementById('biteshipAreaId') ? document.getElementById('biteshipAreaId').value : '',
-                    
-                    // --- TAMBAHAN BARU: MENANGKAP KOORDINAT GPS ---
-                    latitude: document.getElementById('hiddenLat') ? document.getElementById('hiddenLat').value : '',
-                    longitude: document.getElementById('hiddenLon') ? document.getElementById('hiddenLon').value : ''
+                    address: savedAddress.addressDetail || (document.getElementById('addressDetail') ? document.getElementById('addressDetail').value : document.getElementById('alamatLengkap').value),
+                    area_id: savedAddress.areaId || (document.getElementById('biteshipAreaId') ? document.getElementById('biteshipAreaId').value : ''),
+
+                    // MENGGUNAKAN KOORDINAT DARI CACHE SECARA OTOMATIS
+                    latitude: savedAddress.lat || '',
+                    longitude: savedAddress.lon || ''
                 },
                 items: cart,
                 shipping: {
-                    // Kita gunakan courierChoice yang menangkap nama kurir lengkap dari layar
                     courier: courierChoice || (document.querySelector('input[name="kurirRadio"]:checked') ? document.querySelector('input[name="kurirRadio"]:checked').value : 'Kurir Standar'),
                     cost: ongkirAmount
                 },
@@ -1294,9 +1295,10 @@ if (checkoutPage) {
                 summary: {
                     subtotal: safeSubtotal,
                     admin_fee: adminFee,
-                    grand_total: safeGrandTotal // Menggunakan total yang dihitung mesin!
+                    grand_total: safeGrandTotal
                 }
             };
+
         
             const originalBtnText = btnPlaceOrder.innerHTML;
             btnPlaceOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
@@ -1362,7 +1364,7 @@ if (checkoutPage) {
 // --- KONFIGURASI BITESHIP ---
 // CATATAN: Untuk keamanan level produksi, API Key sebaiknya tidak ditaruh di Frontend. 
 // Namun untuk tahap ini, kita gunakan langsung agar UI berfungsi.
-const BITESHIP_API_KEY = 'iteship_test.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoia3J1cHVrbWllLiIsInVzZXJJZCI6IjY5YWQzOTdmMjZiMDY3YzIzZDIxNGQ5MiIsImlhdCI6MTc3Mjk2MDM2OX0.VMLO13dSbYr-MZSQHvwzmBrDuE483zdazn2KCDwi-_Y'; 
+const BITESHIP_API_KEY = 'biteship_test.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoia3J1cHVrbWllLiIsInVzZXJJZCI6IjY5YWQzOTdmMjZiMDY3YzIzZDIxNGQ5MiIsImlhdCI6MTc3Mjk2MDM2OX0.VMLO13dSbYr-MZSQHvwzmBrDuE483zdazn2KCDwi-_Y'; 
 
 // --- 1. LOCAL STORAGE (MENYIMPAN DATA SAAT REFRESH) ---
 document.addEventListener('DOMContentLoaded', () => {
