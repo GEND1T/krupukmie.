@@ -1,0 +1,256 @@
+/* =========================================
+   CSS KHUSUS SELLER DASHBOARD
+   ========================================= */
+
+/* Variabel Warna & Font Dasar */
+:root { 
+    --primary: #F59E0B; 
+    --sidebar: #1F2937; 
+    --bg: #F3F4F6; 
+    --text: #1F2937; 
+}
+
+body { 
+    margin: 0; 
+    font-family: 'Inter', sans-serif; 
+    background-color: var(--bg); 
+    display: flex; 
+    height: 100vh; 
+    overflow: hidden; 
+}
+
+/* --- SIDEBAR --- */
+.sidebar { 
+    width: 250px; 
+    background: var(--sidebar); 
+    color: white; 
+    display: flex; 
+    flex-direction: column; 
+}
+.sidebar-brand { 
+    padding: 20px; 
+    font-size: 1.5rem; 
+    font-weight: bold; 
+    border-bottom: 1px solid #374151; 
+    color: var(--primary); 
+}
+.nav-item { 
+    padding: 15px 20px; 
+    color: #D1D5DB; 
+    text-decoration: none; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    transition: 0.2s; 
+}
+.nav-item:hover, .nav-item.active { 
+    background: #374151; 
+    color: white; 
+    border-left: 4px solid var(--primary); 
+}
+
+/* --- MAIN CONTENT & TOPBAR --- */
+.main-content { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+}
+.topbar { 
+    background: white; 
+    padding: 15px 20px; 
+    border-bottom: 1px solid #E5E7EB; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+.content-area { 
+    padding: 20px; 
+    overflow-y: auto; 
+    flex: 1; 
+}
+
+/* --- TABS STATUS PESANAN --- */
+.status-tabs { 
+    display: flex; 
+    background: white; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    border: 1px solid #E5E7EB; 
+    margin-bottom: 20px; 
+}
+.tab-btn { 
+    flex: 1; 
+    padding: 12px; 
+    border: none; 
+    background: none; 
+    font-weight: 500; 
+    color: #6B7280; 
+    cursor: pointer; 
+    border-bottom: 3px solid transparent; 
+    transition: 0.2s; 
+}
+.tab-btn:hover { 
+    background: #F9FAFB; 
+}
+.tab-btn.active { 
+    color: var(--primary); 
+    border-bottom-color: var(--primary); 
+    background: #FFFBEB; 
+}
+
+/* --- KARTU PESANAN (ORDER CARD) --- */
+.order-card { 
+    background: white; 
+    border: 1px solid #E5E7EB; 
+    border-radius: 8px; 
+    padding: 20px; 
+    margin-bottom: 15px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+}
+.order-header { 
+    display: flex; 
+    justify-content: space-between; 
+    border-bottom: 1px dashed #E5E7EB; 
+    padding-bottom: 10px; 
+    margin-bottom: 15px; 
+}
+.order-body { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+.order-customer strong { 
+    display: block; 
+    font-size: 1.1rem; 
+    color: var(--text); 
+}
+.order-customer span { 
+    color: #6B7280; 
+    font-size: 0.9rem; 
+}
+
+/* --- LABEL STATUS (BADGES) --- */
+.badge { 
+    padding: 4px 10px; 
+    border-radius: 20px; 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+}
+.badge.pending { background: #FEF3C7; color: #D97706; }    /* Belum Bayar */
+.badge.paid { background: #DBEAFE; color: #2563EB; }       /* Menunggu Konfirmasi */
+.badge.processing { background: #F3E8FF; color: #9333EA; } /* Diproses */
+.badge.shipped { background: #E0E7FF; color: #4F46E5; }    /* Dikirim */
+.badge.completed { background: #D1FAE5; color: #059669; }  /* Selesai */
+.badge.cancelled { background: #FEE2E2; color: #DC2626; }  /* Batal */
+
+/* --- TOMBOL AKSI --- */
+.btn-action { 
+    padding: 8px 16px; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    color: white; 
+    transition: 0.2s; 
+}
+.btn-confirm { background: #3B82F6; } /* Biru */
+.btn-process { background: #8B5CF6; } /* Ungu */
+.btn-ship { background: #10B981; }    /* Hijau */
+.btn-cancel { background: #EF4444; margin-left: 10px; } /* Merah */
+
+/* --- STATE KOSONG --- */
+.empty-state { 
+    text-align: center; 
+    padding: 50px; 
+    color: #6B7280; 
+}
+
+/* =========================================
+   PENGATURAN RESPONSIVE & MOBILE FRIENDLY (PWA)
+   ========================================= */
+
+/* Sembunyikan tombol menu & overlay di layar Desktop */
+.mobile-menu-btn { 
+    display: none; 
+    background: none; 
+    border: none; 
+    font-size: 1.2rem; 
+    color: #1F2937; 
+    cursor: pointer; 
+}
+.sidebar-overlay { 
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    z-index: 999; 
+}
+
+/* Modifikasi Tab Status agar bisa di-swipe di HP */
+.status-tabs { 
+    overflow-x: auto; /* Izinkan scroll horizontal */
+    white-space: nowrap; /* Cegah teks turun ke bawah */
+    -webkit-overflow-scrolling: touch; /* Efek smooth scroll di iOS */
+    scrollbar-width: none; /* Sembunyikan scrollbar di Firefox */
+}
+.status-tabs::-webkit-scrollbar { 
+    display: none; /* Sembunyikan scrollbar di Chrome/Safari */
+}
+.tab-btn { 
+    flex: 0 0 auto; /* Cegah tombol mengecil di layar sempit */
+    padding: 12px 20px; 
+}
+
+/* --- MEDIA QUERY UNTUK LAYAR HP (Maks 768px) --- */
+@media (max-width: 768px) {
+    /* Main Layout */
+    body { flex-direction: column; }
+    
+    /* Sidebar Off-Canvas (Sembunyi di kiri) */
+    .sidebar { 
+        position: fixed; 
+        left: -260px; /* Sembunyikan di luar layar */
+        top: 0; 
+        height: 100%; 
+        z-index: 1000; 
+        transition: 0.3s ease-in-out; 
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    .sidebar.active { left: 0; } /* Munculkan saat tombol ditekan */
+    .sidebar-overlay.active { display: block; }
+    
+    /* Tampilkan Tombol Hamburger */
+    .mobile-menu-btn { display: block; }
+    
+    /* Penyesuaian Topbar */
+    .topbar { padding: 15px; }
+    .topbar h2 { font-size: 1.1rem !important; }
+
+    /* Penyesuaian Kartu Pesanan untuk Jempol HP */
+    .order-header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 10px; 
+    }
+    .order-body { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 15px; 
+    }
+    .order-body > div { 
+        width: 100%; 
+        text-align: left !important; 
+    }
+    
+    /* Tombol Full Width di HP */
+    .btn-action { 
+        width: 100%; 
+        margin: 10px 0 0 0 !important; 
+        display: block; 
+        text-align: center; 
+        padding: 12px; /* Lebih besar agar mudah ditekan */
+    }
+}

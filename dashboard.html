@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard - KrupukMie</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand"><i class="fas fa-store"></i> KrupukMie Hub</div>
+        <a href="#" class="nav-item active"><i class="fas fa-box"></i> Pesanan</a>
+        <a href="#" class="nav-item"><i class="fas fa-cube"></i> Produk</a>
+        <a href="#" class="nav-item"><i class="fas fa-chart-line"></i> Laporan</a>
+        <a href="#" class="nav-item"><i class="fas fa-cog"></i> Pengaturan</a>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="menuToggle" class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
+                <h2 style="margin:0; font-size: 1.2rem; color: #1F2937;">Manajemen Pesanan</h2>
+            </div>
+            
+            <div>
+                <span class="admin-text" style="font-size: 0.9rem; color: #6B7280; margin-right: 15px;">Admin</span>
+                <i class="fas fa-user-circle" style="font-size: 1.5rem; color: #9CA3AF; vertical-align: middle;"></i>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="status-tabs" id="orderTabs">
+                <button class="tab-btn active" data-status="all">Semua</button>
+                <button class="tab-btn" data-status="pending">Belum Bayar</button>
+                <button class="tab-btn" data-status="paid">Perlu Dikonfirmasi</button>
+                <button class="tab-btn" data-status="processing">Diproses</button>
+                <button class="tab-btn" data-status="shipped">Dikirim</button>
+                <button class="tab-btn" data-status="completed">Selesai</button>
+            </div>
+
+            <div id="orderContainer">
+                </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

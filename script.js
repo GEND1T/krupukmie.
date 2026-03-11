@@ -975,8 +975,7 @@ if (checkoutPage) {
         });
 
         if (totalWeightGram < 1000) totalWeightGram = 1000;
-
-        // 2. PAYLOAD UNTUK BITESHIP (Kita panggil Gojek/Grab juga untuk memancing Instan)
+        
         // 2. PAYLOAD UNTUK BITESHIP (Kombinasi Kodepos & Koordinat)
         // Ambil data alamat dari cache untuk mengecek apakah ada koordinat GPS
         const savedAddress = JSON.parse(localStorage.getItem('krupukmie_user_address')) || {};
@@ -1240,99 +1239,121 @@ if (checkoutPage) {
     // ========================================================
     // H. AKSI TOMBOL BUAT PESANAN (INTEGRASI N8N & MIDTRANS)
     // ========================================================
-    const btnPlaceOrder = document.getElementById('btnPlaceOrder');
-
-    btnPlaceOrder.addEventListener('click', async function() {
-        if (ongkirAmount === 0) {
-            alert('Mohon lengkapi Alamat dan pilih Opsi Pengiriman terlebih dahulu.');
-            openSheet('sheetAddress'); 
-            return;
-        }
-
-        const paymentSelected = document.querySelector('input[name="payment"]:checked');
-        if (!paymentSelected) {
-            alert('Mohon pilih metode pembayaran.');
-            openSheet('sheetPayment');
-            return;
-        }
-
-        let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
-        const orderPayload = {
-            customer: {
-                name: document.getElementById('fullname').value,
-                phone: document.getElementById('phone').value,
-                email: 'customer@email.com',
-                address: document.getElementById('alamatLengkap').value,
-                area_id: document.getElementById('biteshipAreaId').value 
-            },
-            items: cart,
-            shipping: {
-                courier: document.querySelector('input[name="kurirRadio"]:checked').value,
-                cost: ongkirAmount
-            },
-            payment_method: paymentSelected.value,
-            summary: {
-                subtotal: subtotalAmount,
-                admin_fee: adminFee,
-                grand_total: subtotalAmount + ongkirAmount + adminFee
+    const btnPlaceOrder = document.getElementById('btnPlaceOrder'); // Pastikan ID ini sesuai dengan tombol di HTML Anda
+    
+    if (btnPlaceOrder) {
+        btnPlaceOrder.addEventListener('click', async function() {
+            if (ongkirAmount === 0) {
+                alert('Mohon lengkapi Alamat dan pilih Opsi Pengiriman terlebih dahulu.');
+                openSheet('sheetAddress'); 
+                return;
             }
-        };
-
-        const originalBtnText = btnPlaceOrder.innerHTML;
-        btnPlaceOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-        btnPlaceOrder.disabled = true;
-
-        try {
-            // 1. Tembak ke Webhook n8n Anda
-            const webhookUrl = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook-test/proses-checkout'; 
+        
+            const paymentSelected = document.querySelector('input[name="payment"]:checked');
+            if (!paymentSelected) {
+                alert('Mohon pilih metode pembayaran.');
+                openSheet('sheetPayment');
+                return;
+            }
+        
+            let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
             
-            const response = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderPayload)
-            });
-            
-           // 2. Tangkap balasan dari n8n
-           const data = await response.json(); 
-            
-           // PENGAMAN JITU: Cek apakah n8n membalas berupa Array [ {token:...} ] atau Object {token:...}
-           const snapToken = Array.isArray(data) ? data[0].token : data.token;
-
-           // Periksa apakah token benar-benar ada
-           if (!snapToken) {
-               console.error("Respons n8n:", data);
-               throw new Error("Gagal mendapatkan Token dari server n8n.");
-           }
-               // ... (kode onSuccess dkk biarkan sama) ...
-            // 3. Panggil Pop-up Midtrans (Dipastikan window.snap sudah ter-load)
-            window.snap.pay(snapToken, {
-                onSuccess: function(result){
-                    alert("Pembayaran Berhasil! Pesanan sedang diproses.");
-                    localStorage.removeItem('krupukCart'); 
-                    window.location.reload(); 
+            // ==========================================
+            // OPTIMASI: PERHITUNGAN GRAND TOTAL AMAN DARI MESIN
+            // ==========================================
+            // Kita hitung harga asli barang dikali jumlahnya (qty) langsung dari database keranjang
+            const safeSubtotal = cart.reduce((total, item) => total + (item.price * item.qty), 0);
+            const adminFee = 5000; // Pastikan ini sama dengan angka biaya admin di UI Anda
+            const safeGrandTotal = safeSubtotal + ongkirAmount + adminFee;
+        
+            // Ambil nama kurir dari layar
+            const courierChoice = document.getElementById('displayShipping').innerText.replace(/\n/g, ' - ');
+            // Buat Invoice unik
+            const invoiceNumber = 'INV-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        
+            const orderPayload = {
+                invoice_number: invoiceNumber, // Tambahkan ini agar Supabase punya referensi
+                customer: {
+                    name: document.getElementById('fullname').value,
+                    phone: document.getElementById('phone').value,
+                    email: 'customer@email.com',
+                    address: document.getElementById('addressDetail') ? document.getElementById('addressDetail').value : document.getElementById('alamatLengkap').value,
+                    area_id: document.getElementById('biteshipAreaId') ? document.getElementById('biteshipAreaId').value : '',
+                    
+                    // --- TAMBAHAN BARU: MENANGKAP KOORDINAT GPS ---
+                    latitude: document.getElementById('hiddenLat') ? document.getElementById('hiddenLat').value : '',
+                    longitude: document.getElementById('hiddenLon') ? document.getElementById('hiddenLon').value : ''
                 },
-                onPending: function(result){
-                    alert("Menunggu pembayaran Anda. Silakan cek detail di halaman selanjutnya.");
-                    localStorage.removeItem('krupukCart');
-                    window.location.reload(); 
+                items: cart,
+                shipping: {
+                    // Kita gunakan courierChoice yang menangkap nama kurir lengkap dari layar
+                    courier: courierChoice || (document.querySelector('input[name="kurirRadio"]:checked') ? document.querySelector('input[name="kurirRadio"]:checked').value : 'Kurir Standar'),
+                    cost: ongkirAmount
                 },
-                onError: function(result){
-                    alert("Pembayaran gagal! Silakan coba lagi.");
-                },
-                onClose: function(){
-                    alert('Anda menutup layar pembayaran sebelum menyelesaikannya.');
+                payment_method: paymentSelected.value,
+                summary: {
+                    subtotal: safeSubtotal,
+                    admin_fee: adminFee,
+                    grand_total: safeGrandTotal // Menggunakan total yang dihitung mesin!
                 }
-            });
-
-        } catch (error) {
-            console.error('Error Checkout:', error);
-            alert('Terjadi kesalahan koneksi ke server. Pastikan Webhook n8n sedang aktif (Listen for Test Event).');
-        } finally {
-            // Apapun yang terjadi (berhasil/gagal), kembalikan wujud tombol seperti semula
-            btnPlaceOrder.innerHTML = originalBtnText;
-            btnPlaceOrder.disabled = false;
-        }
-    });
+            };
+        
+            const originalBtnText = btnPlaceOrder.innerHTML;
+            btnPlaceOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            btnPlaceOrder.disabled = true;
+        
+            try {
+                // 1. Tembak ke Webhook n8n Anda
+                // Pastikan URL ini aktif dan dalam mode "Listen for Test Event"
+                const webhookUrl = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proses-checkout'; 
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderPayload)
+                });
+                
+               // 2. Tangkap balasan dari n8n
+               const data = await response.json(); 
+                
+               // PENGAMAN JITU: Cek apakah n8n membalas berupa Array [ {token:...} ] atau Object {token:...}
+               const snapToken = Array.isArray(data) ? data[0].token : data.token;
+            
+               // Periksa apakah token benar-benar ada
+               if (!snapToken) {
+                   console.error("Respons n8n:", data);
+                   throw new Error("Gagal mendapatkan Token dari server n8n.");
+               }
+               
+                // 3. Panggil Pop-up Midtrans (Dipastikan window.snap sudah ter-load)
+                window.snap.pay(snapToken, {
+                    onSuccess: function(result){
+                        alert("Pembayaran Berhasil! Pesanan sedang diproses.");
+                        localStorage.removeItem('krupukCart'); 
+                        window.location.reload(); 
+                    },
+                    onPending: function(result){
+                        alert("Menunggu pembayaran Anda. Silakan cek detail di halaman selanjutnya.");
+                        localStorage.removeItem('krupukCart');
+                        window.location.reload(); 
+                    },
+                    onError: function(result){
+                        alert("Pembayaran gagal! Silakan coba lagi.");
+                    },
+                    onClose: function(){
+                        alert('Anda menutup layar pembayaran sebelum menyelesaikannya.');
+                    }
+                });
+            
+            } catch (error) {
+                console.error('Error Checkout:', error);
+                alert('Terjadi kesalahan koneksi ke server. Pastikan Webhook n8n sedang aktif (Listen for Test Event).');
+            } finally {
+                btnPlaceOrder.innerHTML = originalBtnText;
+                btnPlaceOrder.disabled = false;
+            }
+        });
+    }
 
     
 }
