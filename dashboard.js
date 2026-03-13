@@ -342,3 +342,111 @@ tabBtns.forEach(btn => {
 // ==========================================
 fetchOrdersFromSupabase();
 
+
+// ==========================================
+// 5. FITUR MANAJEMEN PRODUK (HARGA DINAMIS)
+// ==========================================
+const viewOrders = document.getElementById('viewOrders');
+const viewProducts = document.getElementById('viewProducts');
+const productsList = document.getElementById('productsList');
+
+// --- A. Logika Pindah Ruangan (Navigasi) ---
+function openProductsView() {
+    viewOrders.style.display = 'none';
+    viewProducts.style.display = 'block';
+    fetchProductsAdmin(); // Tarik data harga terbaru saat halaman dibuka
+}
+
+function openOrdersView() {
+    viewProducts.style.display = 'none';
+    viewOrders.style.display = 'block';
+    fetchOrdersFromSupabase(); // Tarik data pesanan terbaru
+}
+
+// --- B. Tarik Data Produk dari Supabase ---
+async function fetchProductsAdmin() {
+    productsList.innerHTML = '<div style="text-align:center; padding: 30px; color:#6B7280;"><i class="fas fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i><br>Mengambil data produk...</div>';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/products?order=weight.asc`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${adminToken}` // Gunakan Paspor Admin!
+            }
+        });
+        
+        if (!response.ok) throw new Error('Gagal menarik data');
+        const data = await response.json();
+        renderProductsAdmin(data);
+    } catch (error) {
+        productsList.innerHTML = '<div style="color:#EF4444; text-align:center; padding: 20px;"><i class="fas fa-exclamation-circle"></i> Gagal memuat produk. Periksa koneksi Anda.</div>';
+    }
+}
+
+// --- C. Gambar Daftar Produk ke Layar ---
+function renderProductsAdmin(products) {
+    let html = '';
+    products.forEach(prod => {
+        html += `
+        <div style="background: #fff; border: 1px solid #E5E7EB; border-radius: 10px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="background: #EFF6FF; color: #3B82F6; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 1.2rem;">
+                    <i class="fas fa-cookie"></i>
+                </div>
+                <div>
+                    <strong style="display:block; font-size: 1.1rem; color: #1F2937;">${prod.name}</strong>
+                    <span style="color: #6B7280; font-size: 0.9rem;"><i class="fas fa-tag"></i> Varian: <b style="color:#1F2937;">${prod.variant}</b> &nbsp;|&nbsp; <i class="fas fa-weight-hanging"></i> ${prod.weight}g</span>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="display:block; color: #10B981; font-weight: 800; font-size: 1.3rem; margin-bottom: 8px;">${formatRupiah(prod.price)}</span>
+                <button onclick="editProductPrice('${prod.id}', '${prod.name} (${prod.variant})', ${prod.price})" style="background: #3B82F6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: background 0.2s;"><i class="fas fa-edit"></i> Ubah Harga</button>
+            </div>
+        </div>
+        `;
+    });
+    productsList.innerHTML = html;
+}
+
+// --- D. Aksi Ubah Harga (PATCH ke Supabase) ---
+async function editProductPrice(id, name, currentPrice) {
+    // Memunculkan Pop-up bawaan browser untuk kemudahan
+    const newPriceStr = prompt(`Masukkan HARGA BARU (Angka saja, tanpa titik) untuk:\n📦 ${name}\n\nHarga saat ini: Rp ${currentPrice}`, currentPrice);
+    
+    // Validasi Jika dibatalkan atau kosong
+    if (newPriceStr === null || newPriceStr.trim() === '') return; 
+    
+    const newPrice = parseInt(newPriceStr);
+    
+    // Validasi Jika yang diketik bukan angka
+    if (isNaN(newPrice) || newPrice < 0) {
+        alert("⚠️ Harga tidak valid! Harap masukkan angka saja (Contoh: 15000).");
+        return;
+    }
+
+    // Jika harga tidak berubah, abaikan
+    if (newPrice === currentPrice) return;
+
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${adminToken}`, // Pastikan hanya Admin yang bisa mengubah!
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ price: newPrice })
+        });
+
+        if (!response.ok) throw new Error('Gagal update harga');
+        
+        alert(`✅ Sukses!\nHarga ${name} berhasil diperbarui menjadi ${formatRupiah(newPrice)}.`);
+        
+        // Refresh layar untuk menampilkan harga baru
+        fetchProductsAdmin(); 
+
+    } catch (error) {
+        alert('❌ Terjadi kesalahan saat menyimpan harga. Pastikan sesi login Anda masih aktif.');
+    }
+}

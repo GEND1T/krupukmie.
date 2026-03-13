@@ -184,7 +184,6 @@ if (storeHero) {
             });
             const products = await response.json();
 
-            // Cocokkan harga dari database dengan tombol radio di HTML
            // Cocokkan harga dari database dengan tombol radio di HTML
            products.forEach(prod => {
             const radio = document.querySelector(`input[name="ukuran"][value="${prod.variant}"]`);
@@ -201,6 +200,7 @@ if (storeHero) {
                 }
             }
         });
+
             // Update harga utama di layar berdasarkan varian yang sedang terpilih
             const activeRadio = document.querySelector('input[name="ukuran"]:checked');
             if (activeRadio) {
@@ -472,6 +472,7 @@ const checkoutPage = document.querySelector('.mobile-checkout-page');
 
 if (checkoutPage) {
     // Variabel Kalkulasi Global
+    let fetchRatesTimeout = null;
     let subtotalAmount = 0;
     let ongkirAmount = 0;
     let adminFee = 500; // Ubah dari 2500 menjadi 0 (karena menunggu user milih)
@@ -530,41 +531,72 @@ if (checkoutPage) {
     
     if (checkoutCartContainer) {
         checkoutCartContainer.addEventListener('click', function(e) {
-            // PERBAIKAN 1: Cari elemen berdasarkan class CSS yang baru (.checkout-item-card)
             const card = e.target.closest('.checkout-item-card');
-            if (!card) return; // Jika klik di luar area produk, abaikan
+            if (!card) return; 
 
             const itemIndex = card.getAttribute('data-index');
             let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];
-            
-            if (!cart[itemIndex]) return; // Pengaman data
+            if (!cart[itemIndex]) return; 
 
-            // PERBAIKAN 2: Gunakan closest() agar jika ikon yang terklik, tetap dihitung sebagai tombol
+            // Deteksi apakah tombol ditekan
+            let isChanged = false;
+
             if (e.target.closest('.btn-increase-checkout')) {
                 cart[itemIndex].qty += 1;
                 cart[itemIndex].total = cart[itemIndex].qty * cart[itemIndex].price;
+                isChanged = true;
                 
             } else if (e.target.closest('.btn-decrease-checkout')) {
                 if (cart[itemIndex].qty > 1) {
                     cart[itemIndex].qty -= 1;
                     cart[itemIndex].total = cart[itemIndex].qty * cart[itemIndex].price;
+                    isChanged = true;
                 } else {
-                    if (confirm('Hapus produk ini dari pesanan?')) cart.splice(itemIndex, 1);
+                    if (confirm('Hapus produk ini dari pesanan?')) {
+                        cart.splice(itemIndex, 1);
+                        isChanged = true;
+                    }
                 }
                 
             } else if (e.target.closest('.btn-remove-checkout')) {
-                if (confirm('Hapus produk ini dari pesanan?')) cart.splice(itemIndex, 1);
-                
-            } else {
-                return; // Abaikan jika klik di teks/area kosong
+                if (confirm('Hapus produk ini dari pesanan?')) {
+                    cart.splice(itemIndex, 1);
+                    isChanged = true;
+                }
             }
 
-            // Simpan data terbaru dan render ulang layarnya instan
-            localStorage.setItem('krupukCart', JSON.stringify(cart));
-            renderCheckoutItems(); 
+            // JIKA ADA PERUBAHAN JUMLAH BARANG, LAKUKAN RESET ONGKIR!
+            if (isChanged) {
+                localStorage.setItem('krupukCart', JSON.stringify(cart));
+                renderCheckoutItems(); 
+                
+                // 1. Reset tampilan UI Ongkir menjadi 0
+                document.getElementById('displayShipping').textContent = 'Pilih Opsi Pengiriman';
+                document.getElementById('displayShippingCost').textContent = 'Rp 0';
+                ongkirAmount = 0;
+                
+                // 2. Kosongkan pilihan radio kurir (agar user wajib milih ulang)
+                const checkedRadio = document.querySelector('input[name="kurirRadio"]:checked');
+                if (checkedRadio) checkedRadio.checked = false;
+
+                // 3. Panggil ulang API Biteship dengan berat barang yang baru (DENGAN PENAHAN SPAM)
+                const savedAddress = JSON.parse(localStorage.getItem('krupukmie_user_address'));
+                if (savedAddress && savedAddress.areaId && savedAddress.postalCode) {
+                    document.getElementById('shippingOptionsContainer').innerHTML = `<p style="text-align: center; padding: 2rem 0; color: #F59E0B;"><i class="fas fa-sync-alt fa-spin"></i> Menyesuaikan tarif ongkir...</p>`;
+                    
+                    // Batalkan tembakan API sebelumnya jika pembeli masih menekan tombol (+)
+                    if (fetchRatesTimeout) clearTimeout(fetchRatesTimeout);
+                    
+                    // Tahan selama 1 detik. Jika tidak ada klik lagi, baru tembak!
+                    fetchRatesTimeout = setTimeout(() => {
+                        fetchShippingRates(savedAddress.areaId, savedAddress.postalCode);
+                    }, 1500); 
+                }
+                
+                updateGrandTotal(); // Perbarui perhitungan total akhir
+            }
         });
     }
-
     // --- B. MANAJEMEN MULTI-BOTTOM SHEET ---
     const overlay = document.getElementById('checkoutOverlay');
     
@@ -814,9 +846,12 @@ if (checkoutPage) {
         dynamicRegionList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6B7280;"><i class="fas fa-spinner fa-spin"></i> Memverifikasi dengan Kurir...</div>';
         try {
             // PERUBAHAN DI SINI: Tembak ke n8n, bukan ke Biteship langsung
-            // Header Authorization sudah dibuang!
-            const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`);
-            
+            // Tambahkan parameter headers di fetch ini
+            const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
+                headers: {
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            });
             const data = await response.json();
             
             if (data.success && data.areas.length > 0) {
@@ -1060,8 +1095,9 @@ if (checkoutPage) {
             const response = await fetch("https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-rates", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
-                    // PERHATIKAN: Kita sudah membuang baris "Authorization": BITESHIP_API_KEY dari sini!
+                    "Content-Type": "application/json",
+                    // Tambahkan baris ini:
+                    "ngrok-skip-browser-warning": "true" 
                 },
                 body: JSON.stringify(payload)
             });
@@ -1455,8 +1491,12 @@ inputSearch.addEventListener('input', function() {
 async function fetchBiteshipAreas(query) {
     try {
         // GANTI DENGAN URL NGROK / N8N ANDA
-        const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`);
-        
+        // Tambahkan parameter headers di fetch ini
+        const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
+            headers: {
+                'ngrok-skip-browser-warning': 'true'
+            }
+        });
         const data = await response.json();
         
         if (data.success && data.areas.length > 0) {

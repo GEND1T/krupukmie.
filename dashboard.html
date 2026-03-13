@@ -16,8 +16,8 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-brand"><i class="fas fa-store"></i> KrupukMie Hub</div>
-        <a href="#" class="nav-item active"><i class="fas fa-box"></i> Pesanan</a>
-        <a href="#" class="nav-item"><i class="fas fa-cube"></i> Produk</a>
+        <li class="nav-item active" onclick="openOrdersView()"><i class="fas fa-shopping-bag"></i> Pesanan</li>
+        <li class="nav-item" onclick="openProductsView()"><i class="fas fa-box"></i> Manajemen Produk</li>
         <a href="#" class="nav-item"><i class="fas fa-chart-line"></i> Laporan</a>
         <a href="#" class="nav-item"><i class="fas fa-cog"></i> Pengaturan</a>
         <li class="nav-item text-danger" onclick="logoutAdmin()" style="cursor: pointer; color: #EF4444; margin-top: 0px;">
@@ -48,10 +48,25 @@
                 <button class="tab-btn" data-status="completed">Selesai</button>
             </div>
 
-            <div id="orderContainer">
+            
+            <div id="viewOrders">
+                <div id="orderContainer"></div>
+            </div>
+
+            <div id="viewProducts" style="display: none; padding-top: 10px;">
+                <div style="background: #fff; padding: 20px; border-radius: 10px; border: 1px solid #E5E7EB; margin-bottom: 20px;">
+                    <h2 style="color: #1F2937; margin-top: 0; font-size: 1.4rem;"><i class="fas fa-tags" style="color: #3B82F6; margin-right: 8px;"></i> Etalase Harga</h2>
+                    <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 0;">Perubahan harga di sini akan langsung mengubah harga di halaman toko pembeli secara real-time.</p>
                 </div>
+                
+                <div id="productsList"></div>
+            </div>
         </div>
-    </div>
+
+        </div>
+
+
+        
 
     <script src="dashboard.js"></script>
 </body>
