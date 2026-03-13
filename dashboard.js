@@ -330,7 +330,7 @@ async function requestPickupN8n(invoiceLabel) {
 
     if (!confirmResult.isConfirmed) return;
 
-    const WEBHOOK_PICKUP_URL = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook/request-pickup-biteship';
+    const WEBHOOK_PICKUP_URL = 'https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/request-pickup-biteship';
 
     try {
         // Tampilkan Popup Loading Interaktif

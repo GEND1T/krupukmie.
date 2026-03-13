@@ -67,7 +67,7 @@ if (formContact) {
             source: 'Landing Page Contact Form'
         };
 
-        const webhookUrl = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook/contact-form'; 
+        const webhookUrl = 'https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/contact-form'; 
 
         // Kirim request (Fetch API)
         fetch(webhookUrl, {
@@ -1006,7 +1006,7 @@ if (checkoutPage) {
         try {
             // PERUBAHAN DI SINI: Tembak ke n8n, bukan ke Biteship langsung
             // Tambahkan parameter headers di fetch ini
-            const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
+            const response = await fetch(`https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
                 headers: {
                     'ngrok-skip-browser-warning': 'true'
                 }
@@ -1258,7 +1258,7 @@ if (checkoutPage) {
 
         try {
             // GANTI DENGAN URL NGROK / N8N ANDA
-            const response = await fetch("https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-rates", {
+            const response = await fetch("https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/proxy-biteship-rates", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -1534,14 +1534,15 @@ if (checkoutPage) {
             const orderPayload = {
                 invoice_number: invoiceNumber,
                 customer: {
-                    // Gunakan data dari Cache (savedAddress) sebagai prioritas utama
                     name: savedAddress.name || document.getElementById('fullname').value,
                     phone: savedAddress.phone || document.getElementById('phone').value,
                     email: 'customer@email.com',
                     address: savedAddress.addressDetail || (document.getElementById('addressDetail') ? document.getElementById('addressDetail').value : document.getElementById('alamatLengkap').value),
                     area_id: savedAddress.areaId || (document.getElementById('biteshipAreaId') ? document.getElementById('biteshipAreaId').value : ''),
+                    
+                    // 👇 TAMBAHKAN BARIS INI UNTUK MENGIRIM KODE POS KE N8N 👇
+                    postal_code: savedAddress.postalCode || (document.getElementById('kodeposHidden') ? document.getElementById('kodeposHidden').value : ''),
 
-                    // MENGGUNAKAN KOORDINAT DARI CACHE SECARA OTOMATIS
                     latitude: savedAddress.lat || '',
                     longitude: savedAddress.lon || ''
                 },
@@ -1566,7 +1567,7 @@ if (checkoutPage) {
             try {
                 // 1. Tembak ke Webhook n8n Anda
                 // Pastikan URL ini aktif dan dalam mode "Listen for Test Event"
-                const webhookUrl = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proses-checkout'; 
+                const webhookUrl = 'https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/proses-checkout'; 
                 
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
@@ -1698,7 +1699,7 @@ async function fetchBiteshipAreas(query) {
     try {
         // GANTI DENGAN URL NGROK / N8N ANDA
         // Tambahkan parameter headers di fetch ini
-        const response = await fetch(`https://earnestine-fruitful-arla.ngrok-free.dev/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
+        const response = await fetch(`https://n8n-brfcubpy6mnf.jkt2.sumopod.my.id/webhook/proxy-biteship-areas?input=${encodeURIComponent(query)}`, {
             headers: {
                 'ngrok-skip-browser-warning': 'true'
             }
