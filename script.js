@@ -1237,7 +1237,7 @@ if (checkoutPage) {
             
             
             destination_postal_code: parseInt(postalCode), 
-            couriers: "jne,sicepat,jnt,idexpress,tiki,ninja,lion,anteraja,pos,wahana,rpx,sap,gojek,grab,lalamove", 
+            couriers: "jne,sicepat,jnt,idexpress,tiki,ninja,lion,anteraja,pos,wahana,rpx,gojek,grab,lalamove", 
             items: [
                 {
                     name: "Pesanan KrupukMie",
