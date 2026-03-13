@@ -2240,7 +2240,7 @@ section {
 /* Mengatur gaya teks deskripsi/pesan */
 .swal2-html-container {
     color: #6B7280 !important; /* Abu-abu sedang agar mudah dibaca */
-    font-size: 1.15rem !important;
+    font-size: 0.95rem !important;
     line-height: 1.5 !important;
 }
 
@@ -2269,4 +2269,71 @@ section {
 .swal2-icon {
     margin: 0 auto 1.5em auto !important;
     transform: scale(0.9) !important;
+}
+
+/* =========================================
+   36. FIX TAMPILAN MOBILE (RESPONSIVE POLISH)
+   ========================================= */
+   @media (max-width: 576px) {
+    /* 1. Bebaskan Ruang: Kurangi padding kiri-kanan container */
+    .container {
+        padding: 0 1rem; 
+    }
+
+    /* 2. Proporsikan Teks: Perkecil font raksasa agar pas di HP */
+    .hero-text h1 {
+        font-size: 2rem; 
+    }
+    h2 {
+        font-size: 1.6rem;
+    }
+    .product-info h1 {
+        font-size: 1.6rem;
+    }
+
+    /* 3. Fix Kartu Varian: Ubah jadi 1 baris (atas-bawah) agar teks tidak tergencet */
+    .variant-cards {
+        grid-template-columns: 1fr; 
+        gap: 0.8rem;
+    }
+
+    /* Sesuaikan tinggi dan padding dalam kotak varian */
+    .card-content {
+        padding: 1rem;
+        flex-direction: row; /* Berjejer ke samping agar hemat ruang vertikal */
+        justify-content: space-between;
+    }
+    .card-content .weight {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
+
+    /* 4. Fix Sticky Bottom CTA (Keranjang Bawah) yang tabrakan */
+    .mobile-sticky-cta {
+        padding: 0.8rem 1rem;
+        gap: 10px;
+    }
+    .sticky-price .price {
+        font-size: 1.1rem;
+    }
+    .mobile-sticky-cta .btn-primary {
+        padding: 0.8rem 1.2rem;
+        font-size: 0.95rem;
+    }
+
+    /* 5. Fix Tombol GPS & Input Search yang terlalu mepet */
+    .sheet-body {
+        padding: 1rem !important;
+    }
+}
+
+/* Khusus Layar Super Sempit (iPhone SE / Galaxy Fold tertutup) */
+@media (max-width: 360px) {
+    .hero-text h1 {
+        font-size: 1.8rem;
+    }
+    .mobile-sticky-cta .btn-primary {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
 }

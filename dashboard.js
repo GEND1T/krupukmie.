@@ -14,10 +14,21 @@ if (!adminToken) {
 
 // Fungsi Logout
 function logoutAdmin() {
-    if (confirm("Apakah Anda yakin ingin keluar dari Seller Dashboard?")) {
-        sessionStorage.removeItem('krupukmie_admin_token');
-        window.location.href = 'login.html';
-    }
+    Swal.fire({
+        title: 'Keluar Dashboard?',
+        text: "Apakah Anda yakin ingin keluar dari sesi Admin KrupukMie?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444', // Merah
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            sessionStorage.removeItem('krupukmie_admin_token');
+            window.location.href = 'login.html';
+        }
+    });
 }
 
 // ==========================================
@@ -253,18 +264,31 @@ function renderOrders(filterStatus = 'all') {
 // ==========================================
 // 3. FUNGSI UPDATE STATUS KE SUPABASE (PATCH)
 // ==========================================
+// ==========================================
+// 3. FUNGSI UPDATE STATUS KE SUPABASE (PATCH)
+// ==========================================
 async function updateOrderStatusInSupabase(dbId, newStatus, invoiceLabel) {
-    if (!confirm(`Ubah status pesanan ${invoiceLabel} menjadi: ${statusLabels[newStatus].text}?`)) return;
+    // Popup Konfirmasi yang Elegan
+    const confirmResult = await Swal.fire({
+        title: 'Ubah Status?',
+        text: `Ubah status pesanan ${invoiceLabel} menjadi: ${statusLabels[newStatus].text}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3B82F6', // Biru
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Ya, Ubah!',
+        cancelButtonText: 'Batal'
+    });
+
+    if (!confirmResult.isConfirmed) return; // Hentikan jika klik Batal
 
     try {
-        // PERBAIKAN: Gunakan order_status, bukan status, agar sesuai dengan DB
         const payload = { order_status: newStatus };
-
         const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${dbId}`, {
             method: 'PATCH',
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${adminToken}`, // PASPOR RAHASIA DARI LOGIN
+                'Authorization': `Bearer ${adminToken}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },
@@ -273,14 +297,19 @@ async function updateOrderStatusInSupabase(dbId, newStatus, invoiceLabel) {
 
         if (!response.ok) throw new Error('Gagal update database');
 
-        alert('Status berhasil diperbarui!');
+        // Notifikasi Sukses Pojok Kanan Atas (Toast)
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Status berhasil diperbarui!',
+            showConfirmButton: false,
+            timer: 2000
+        });
         
-        // Tarik ulang data terbaru dari server agar tampilan tersinkronisasi
-        fetchOrdersFromSupabase();
-
+        fetchOrdersFromSupabase(); // Tarik ulang data
     } catch (error) {
-        console.error("Update Error:", error);
-        alert('Gagal mengubah status. Periksa koneksi Anda.');
+        Swal.fire('Oops!', 'Gagal mengubah status. Periksa koneksi Anda.', 'error');
     }
 }
 
@@ -288,38 +317,57 @@ async function updateOrderStatusInSupabase(dbId, newStatus, invoiceLabel) {
 // FUNGSI REQUEST PICKUP KE N8N (BITESHIP)
 // ==========================================
 async function requestPickupN8n(invoiceLabel) {
-    if (!confirm(`Panggil kurir Biteship sekarang untuk pesanan ${invoiceLabel}? Pastikan barang sudah siap dipacking!`)) return;
+    const confirmResult = await Swal.fire({
+        title: 'Panggil Kurir?',
+        text: `Panggil kurir ekspedisi sekarang untuk pesanan ${invoiceLabel}? Pastikan barang sudah siap dipacking!`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#8B5CF6', // Ungu Biteship
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Ya, Panggil!',
+        cancelButtonText: 'Batal'
+    });
 
-    // GANTI DENGAN URL WEBHOOK N8N "REQUEST PICKUP" ANDA
+    if (!confirmResult.isConfirmed) return;
+
     const WEBHOOK_PICKUP_URL = 'https://earnestine-fruitful-arla.ngrok-free.dev/webhook/request-pickup-biteship';
 
     try {
-        // Beri efek loading di layar
-        orderContainer.innerHTML = `<div class="empty-state">
-            <i class="fas fa-motorcycle fa-spin" style="font-size: 3rem; color: #8B5CF6; margin-bottom: 15px;"></i>
-            <h3>Sedang memanggil kurir...</h3>
-            <p>Mohon tunggu, sedang berkomunikasi dengan sistem ekspedisi.</p>
-        </div>`;
+        // Tampilkan Popup Loading Interaktif
+        Swal.fire({
+            title: 'Memanggil Kurir...',
+            html: 'Sistem sedang berkomunikasi dengan satelit ekspedisi 📡',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         const response = await fetch(WEBHOOK_PICKUP_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true' // Anti blokir ngrok
+            },
             body: JSON.stringify({ invoice: invoiceLabel })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            alert(`Berhasil! Kurir sedang menuju ke toko.\nNo Resi: ${data.biteship_tracking_id}`);
+            Swal.fire({
+                title: 'Kurir OTW! 🛵',
+                text: `Berhasil! Kurir sedang menuju ke toko. No Resi: ${data.biteship_tracking_id}`,
+                icon: 'success',
+                confirmButtonColor: '#10B981'
+            });
         } else {
-            alert("Terjadi kendala saat memesan kurir. Silakan cek dashboard n8n/Biteship.");
+            Swal.fire('Kendala Pengiriman', 'Terjadi kendala saat memesan kurir. Silakan cek dashboard n8n/Biteship.', 'warning');
         }
     } catch (error) {
-        console.error("Pickup Error:", error);
-        alert("Gagal terhubung ke server pemanggil kurir.");
+        Swal.fire('Koneksi Terputus', 'Gagal terhubung ke server pemanggil kurir.', 'error');
     } finally {
-        // Tarik ulang data dari Supabase agar Resi muncul di layar!
-        fetchOrdersFromSupabase();
+        fetchOrdersFromSupabase(); // Refresh layar agar resi muncul
     }
 }
 
@@ -410,20 +458,29 @@ function renderProductsAdmin(products) {
 
 // --- D. Aksi Ubah Harga (PATCH ke Supabase) ---
 async function editProductPrice(id, name, currentPrice) {
-    // Memunculkan Pop-up bawaan browser untuk kemudahan
-    const newPriceStr = prompt(`Masukkan HARGA BARU (Angka saja, tanpa titik) untuk:\n📦 ${name}\n\nHarga saat ini: Rp ${currentPrice}`, currentPrice);
+    // Memunculkan Pop-up Input Angka Modern
+    const { value: newPriceStr } = await Swal.fire({
+        title: 'Ubah Harga Produk',
+        html: `Masukkan harga baru untuk:<br><b style="color:#1F2937; font-size:1.1rem;">📦 ${name}</b><br><br><span style="color:#6B7280; font-size:0.85rem;">Harga saat ini: ${formatRupiah(currentPrice)}</span>`,
+        input: 'number',
+        inputPlaceholder: 'Ketik angka saja (misal: 16000)',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981', // Hijau
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: '<i class="fas fa-save"></i> Simpan Harga',
+        cancelButtonText: 'Batal',
+        inputValidator: (value) => {
+            if (!value || isNaN(value) || value <= 0) {
+                return '⚠️ Harap masukkan angka harga yang valid!';
+            }
+        }
+    });
     
-    // Validasi Jika dibatalkan atau kosong
-    if (newPriceStr === null || newPriceStr.trim() === '') return; 
+    // Validasi Jika dibatalkan
+    if (!newPriceStr) return; 
     
     const newPrice = parseInt(newPriceStr);
     
-    // Validasi Jika yang diketik bukan angka
-    if (isNaN(newPrice) || newPrice < 0) {
-        alert("⚠️ Harga tidak valid! Harap masukkan angka saja (Contoh: 15000).");
-        return;
-    }
-
     // Jika harga tidak berubah, abaikan
     if (newPrice === currentPrice) return;
 
@@ -432,7 +489,7 @@ async function editProductPrice(id, name, currentPrice) {
             method: 'PATCH',
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${adminToken}`, // Pastikan hanya Admin yang bisa mengubah!
+                'Authorization': `Bearer ${adminToken}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },
@@ -441,12 +498,10 @@ async function editProductPrice(id, name, currentPrice) {
 
         if (!response.ok) throw new Error('Gagal update harga');
         
-        alert(`✅ Sukses!\nHarga ${name} berhasil diperbarui menjadi ${formatRupiah(newPrice)}.`);
+        Swal.fire('Sukses!', `Harga ${name} berhasil diperbarui menjadi ${formatRupiah(newPrice)}.`, 'success');
         
-        // Refresh layar untuk menampilkan harga baru
-        fetchProductsAdmin(); 
-
+        fetchProductsAdmin(); // Refresh layar
     } catch (error) {
-        alert('❌ Terjadi kesalahan saat menyimpan harga. Pastikan sesi login Anda masih aktif.');
+        Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan harga. Pastikan sesi login Anda masih aktif.', 'error');
     }
 }
