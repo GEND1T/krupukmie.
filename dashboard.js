@@ -86,10 +86,6 @@ function formatRupiah(number) {
 // 1. FUNGSI TARIK DATA DARI SUPABASE (GET JOINED)
 // ==========================================
 async function fetchOrdersFromSupabase() {
-    orderContainer.innerHTML = `<div class="empty-state">
-        <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: #F59E0B; margin-bottom: 15px;"></i>
-        <h3>Menyinkronkan Database & Rincian Pesanan...</h3>
-    </div>`;
 
     try {
         const headers = {
@@ -139,12 +135,17 @@ async function fetchOrdersFromSupabase() {
             } else {
                 itemsTextHtml = `<div style="padding: 12px 0; color: #EF4444; font-style: italic; font-size: 0.85rem;">Rincian barang tidak ditemukan</div>`;
             }
-            // Logika Status Otomatis Midtrans
+            // Logika Sinkronisasi Status (Mayar -> Dashboard Baru)
             let currentStatus = order.order_status || 'pending';
+            
             if (currentStatus === 'pending' && (order.payment_status === 'settlement' || order.payment_status === 'paid')) {
                 currentStatus = 'paid';
             }
-
+            
+            // JIKA STATUSNYA 'processing' (Dari Mayar), MASUKKAN KE TAB 'Perlu Dikonfirmasi' ('paid')
+            if (currentStatus === 'processing') {
+                currentStatus = 'paid';
+            }
             return {
                 id: order.id,                           
                 invoice: order.invoice_number || order.id, 
@@ -163,8 +164,8 @@ async function fetchOrdersFromSupabase() {
         });
 
         // Tampilkan pesanan sesuai tab yang sedang aktif
-        const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-status');
-        renderOrders(activeTab);
+        currentTab = document.querySelector('.tab-btn.active').getAttribute('data-status');
+        renderOrders();
 
     } catch (error) {
         console.error("Supabase Error:", error);
@@ -527,17 +528,20 @@ async function editProductPrice(id, name, currentPrice) {
         Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan harga. Pastikan sesi login Anda masih aktif.', 'error');
     }
 }
+// ==========================================
+// 6. AUTO-REFRESH & SILENT POLLING (FIXED)
+// ==========================================
 
-// Auto-Refresh Database setiap 10 detik (Silent Polling)
+// 1. Auto-Refresh Database setiap 10 detik (Silent Polling)
 setInterval(() => {
+    const viewOrdersMode = document.getElementById('viewOrders');
     // Hanya lakukan refresh jika Admin sedang membuka Tab Pesanan
-    if (viewOrders.style.display !== 'none') {
+    if (viewOrdersMode && viewOrdersMode.style.display !== 'none') {
         fetchOrdersFromSupabaseSilent();
     }
 }, 10000);
 
-// Copy paste fungsi fetchOrdersFromSupabase Anda sebelumnya, 
-// namun HAPUS bagian innerHTML loading spinner-nya agar tidak kedap-kedip
+// 2. Fungsi Silent Polling dengan Logika Mapping Lengkap
 async function fetchOrdersFromSupabaseSilent() {
     try {
         const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${adminToken}` };
@@ -551,20 +555,65 @@ async function fetchOrdersFromSupabaseSilent() {
         const dbOrders = await ordersResponse.json();
         const dbItems = await itemsResponse.json(); 
         
-        // ... (Masukkan logika pemetaan data orders seperti di fungsi aslinya) ...
-        // [Catatan: Pastikan Anda menyalin logika mapping orders.map dari fungsi fetchOrdersFromSupabase yang lama ke sini]
+        // MAPPING DATA: Terjemahkan data Supabase ke format array "orders"
+        orders = dbOrders.map(order => {
+            const myItems = dbItems.filter(item => item.order_id === order.id);
+            
+            let itemsTextHtml = '';
+            if (myItems.length > 0) {
+                itemsTextHtml = myItems.map((item, index) => {
+                    const borderBottom = index === myItems.length - 1 ? '' : 'border-bottom: 1px dashed #E5E7EB;';
+                    return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; ${borderBottom}">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: #FFFBEB; color: #D97706; font-weight: 700; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 1rem; border: 1px solid #FDE68A;">
+                                ${item.qty}x
+                            </div>
+                            <div>
+                                <strong style="display: block; color: #1F2937; font-size: 0.95rem;">${item.product_name}</strong>
+                                <span style="color: #6B7280; font-size: 0.85rem;"><i class="fas fa-tag" style="color: #D1D5DB;"></i> Varian: <span style="color: #4B5563; font-weight: 500;">${item.variant}</span></span>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                itemsTextHtml = `<div style="padding: 12px 0; color: #EF4444; font-style: italic; font-size: 0.85rem;">Rincian barang tidak ditemukan</div>`;
+            }
+
+            let currentStatus = order.order_status || 'pending';
+            if (currentStatus === 'pending' && (order.payment_status === 'settlement' || order.payment_status === 'paid')) {
+                currentStatus = 'paid';
+            }
+
+            return {
+                id: order.id,                           
+                invoice: order.invoice_number || order.id, 
+                date: new Date(order.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' }),
+                customer: order.customer_name || 'Pembeli',
+                phone: order.customer_phone || '-',
+                items: itemsTextHtml,      
+                total: order.grand_total || 0,
+                courier: order.courier_choice || 'Kurir Standar',
+                status: currentStatus, 
+                resi: order.biteship_tracking_id || null
+            };
+        });
         
         // Populate Dropdown Kurir Otomatis (Hanya jika belum pernah diisi)
         const selectKurir = document.getElementById('filterCourier');
-        if (selectKurir.options.length === 1) {
-            const unikKurir = [...new Set(dbOrders.map(item => item.courier_choice.split('-')[0].trim()))].filter(Boolean);
+        if (selectKurir && selectKurir.options.length === 1) {
+            // Hindari error split jika nama kurir kosong
+            const unikKurir = [...new Set(dbOrders.map(item => item.courier_choice ? item.courier_choice.split('-')[0].trim() : ''))].filter(Boolean);
             unikKurir.forEach(kurir => {
                 selectKurir.innerHTML += `<option value="${kurir}">${kurir.toUpperCase()}</option>`;
             });
         }
 
-        renderOrders(); // Refresh layar
+        // Refresh layar dengan data yang baru diperbarui
+        renderOrders(); 
+        
     } catch (e) {
-        // Biarkan diam jika gagal (agar admin tidak terganggu popup error terus menerus)
+        // Biarkan diam jika gagal (agar admin tidak terganggu popup error)
+        console.error("Silent Polling Error:", e);
     }
 }

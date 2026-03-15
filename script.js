@@ -1481,7 +1481,7 @@ if (checkoutPage) {
                 customer: {
                     name: savedAddress.name || document.getElementById('fullname').value,
                     phone: savedAddress.phone || document.getElementById('phone').value,
-                    email: 'customer@email.com',
+                    email: 'no-reply@krupukmie.com',
                     address: savedAddress.addressDetail || (document.getElementById('addressDetail') ? document.getElementById('addressDetail').value : document.getElementById('alamatLengkap').value),
                     area_id: savedAddress.areaId || (document.getElementById('biteshipAreaId') ? document.getElementById('biteshipAreaId').value : ''),
                     

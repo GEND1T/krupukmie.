@@ -1,0 +1,23 @@
+# 🍘 KrupukMie Hub: Headless E-Commerce & Agentic OMS
+
+KrupukMie Hub adalah prototipe *Headless E-Commerce* dan *Order Management System (OMS)* berskala enterprise yang dirancang khusus untuk UMKM. Proyek ini dibangun dengan pendekatan **Vibecoding (AI-Assisted Development)**.
+
+## ✨ Fitur Utama
+* **🛍️ Seamless Checkout:** Terintegrasi dengan Biteship untuk kalkulasi ongkir otomatis berdasarkan koordinat GPS dan kecamatan (Shopee/TikTok style).
+* **💳 Headless Payment:** Menggunakan **Mayar API** di dalam *Iframe Popup* untuk pengalaman bayar tanpa pindah halaman.
+* **🤖 Agentic Automation (n8n):** Pemrosesan webhook otomatis untuk update status database dan pengiriman struk via WhatsApp (WAHA).
+* **📊 Seller Dashboard (SPA):** Dilengkapi fitur *Silent Polling* (Auto-Refresh), *Triple-Filter* pencarian, dan tombol pemanggil kurir otomatis 1-klik.
+
+## 🛠️ Tech Stack
+* **Frontend:** HTML5 murni, CSS3 (Custom Variables), Vanilla Javascript (No Frameworks)
+* **Backend & Automation:** n8n (Workflow Automation)
+* **Database:** Supabase (PostgreSQL + REST API)
+* **3rd Party API:** Mayar.id (Payment), Biteship (Logistics), WAHA (WhatsApp API), OpenStreetMap (Reverse Geocoding).
+
+## 🚀 Cara Akses Dashboard Admin/Penjualan
+Untuk melihat fitur *Order Management System* (OMS) secara langsung dan melakukan simulasi memproses pesanan (seperti memanggil kurir dan mengelola stok), Anda dapat masuk ke Seller Dashboard KrupukMie.
+
+1. Buka tautan Login Admin: `https://https://krupukmie.web.id/login.html` 
+2. Gunakan kredensial demo berikut untuk masuk:
+   * **Username / Email:** `admin@mayar.ic`
+   * **Password:** `admin`
