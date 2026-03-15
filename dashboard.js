@@ -68,12 +68,14 @@ const tabBtns = document.querySelectorAll('.tab-btn');
 
 // Kamus Label Status
 const statusLabels = {
-    'pending': { text: 'Belum Bayar', class: 'pending' },
-    'paid': { text: 'Menunggu Konfirmasi', class: 'paid' },
-    'processing': { text: 'Diproses / Dikemas', class: 'processing' },
-    'shipped': { text: 'Sedang Dikirim', class: 'shipped' },
-    'completed': { text: 'Selesai', class: 'completed' },
-    'cancelled': { text: 'Dibatalkan', class: 'cancelled' }
+    'pending': { text: 'Belum Bayar', class: 'pending', color: '#6B7280', bg: '#F3F4F6' },
+    'paid': { text: 'Perlu Dikonfirmasi', class: 'paid', color: '#D97706', bg: '#FEF3C7' },
+    'picking_up': { text: 'Penjemputan', class: 'processing', color: '#2563EB', bg: '#DBEAFE' },
+    'dropping_off': { text: 'Pengantaran', class: 'shipped', color: '#7C3AED', bg: '#EDE9FE' },
+    'returned': { text: 'Pengembalian', class: 'cancelled', color: '#EF4444', bg: '#FEE2E2' },
+    'on_hold': { text: 'Ditahan', class: 'cancelled', color: '#9A3412', bg: '#FFEDD5' },
+    'completed': { text: 'Selesai', class: 'completed', color: '#059669', bg: '#D1FAE5' },
+    'cancelled': { text: 'Dibatalkan', class: 'cancelled', color: '#DC2626', bg: '#FEE2E2' }
 };
 
 function formatRupiah(number) {
@@ -176,57 +178,57 @@ async function fetchOrdersFromSupabase() {
 // ==========================================
 // 2. FUNGSI RENDER KE LAYAR
 // ==========================================
-function renderOrders(filterStatus = 'all') {
+// Variabel penyimpan state filter saat ini
+let currentTab = 'all';
+let currentSearch = '';
+let currentCourier = 'all';
+
+function renderOrders() {
     orderContainer.innerHTML = '';
     
-    const filteredOrders = filterStatus === 'all' 
-        ? orders 
-        : orders.filter(o => o.status === filterStatus);
+    // LOGIKA FILTER GABUNGAN (Triple Filter)
+    const filteredOrders = orders.filter(o => {
+        const matchTab = currentTab === 'all' ? true : o.status === currentTab;
+        const matchSearch = o.invoice.toLowerCase().includes(currentSearch.toLowerCase()) || o.customer.toLowerCase().includes(currentSearch.toLowerCase());
+        const matchCourier = currentCourier === 'all' ? true : o.courier.toLowerCase().includes(currentCourier.toLowerCase());
+        
+        return matchTab && matchSearch && matchCourier;
+    });
 
     if (filteredOrders.length === 0) {
-        orderContainer.innerHTML = `<div class="empty-state">
-            <i class="fas fa-box-open" style="font-size: 3rem; color: #D1D5DB; margin-bottom: 15px;"></i>
-            <h3>Tidak ada pesanan</h3>
-            <p>Belum ada pesanan di kategori ini.</p>
+        orderContainer.innerHTML = `<div class="empty-state" style="text-align: center; padding: 40px; color: #9CA3AF;">
+            <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px; color: #E5E7EB;"></i>
+            <h3>Data tidak ditemukan</h3>
+            <p>Cobalah kata kunci atau filter lain.</p>
         </div>`;
         return;
     }
 
     filteredOrders.forEach(order => {
-        // Jika status DB tidak ada di kamus kita, set default ke pending
         const badge = statusLabels[order.status] || statusLabels['pending']; 
         
-        // PERBAIKAN: Tambahkan tanda kutip tunggal pada '${order.id}'
         let actionButtons = '';
         if (order.status === 'paid') {
-            actionButtons = `<button class="btn-action btn-confirm" onclick="updateOrderStatusInSupabase('${order.id}', 'processing', '${order.invoice}')"><i class="fas fa-check"></i> Konfirmasi Pesanan</button>`;
-        } else if (order.status === 'processing') {
-            // Gunakan fungsi requestPickupN8n yang baru!
-            actionButtons = `<button class="btn-action btn-process" onclick="requestPickupN8n('${order.invoice}')"><i class="fas fa-truck-loading"></i> Kirim (Request Pickup)</button>`;
-        } else if (order.status === 'shipped') {
-            actionButtons = `<button class="btn-action btn-ship" onclick="updateOrderStatusInSupabase('${order.id}', 'completed', '${order.invoice}')"><i class="fas fa-flag-checkered"></i> Tandai Selesai</button>`;
+            actionButtons = `<button class="btn-action btn-confirm" onclick="requestPickupN8n('${order.invoice}')" style="background:#8B5CF6; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer;"><i class="fas fa-truck-loading"></i> Proses & Panggil Kurir</button>`;
+        } else if (order.status === 'picking_up' || order.status === 'dropping_off') {
+            actionButtons = `<button class="btn-action btn-track" onclick="window.open('https://biteship.com/track/${order.resi}', '_blank')" style="background:#3B82F6; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer;"><i class="fas fa-map-marked-alt"></i> Lacak Paket</button>`;
+        } else if (order.status === 'on_hold') {
+            actionButtons = `<button class="btn-action btn-danger" style="background:#EF4444; color:white; border:none; padding:8px 15px; border-radius:6px;"><i class="fas fa-exclamation-triangle"></i> Cek Kendala</button>`;
         }
 
-        // ... (kode pengecekan actionButtons tetap di atas sini) ...
-
-        // Tampilkan Resi dengan gaya yang lebih rapi
-        // Desain Resi yang lebih menonjol
         const resiHtml = order.resi ? `<div style="margin-top: 8px; padding: 6px 12px; background: #EEF2FF; border: 1px dashed #6366F1; border-radius: 6px; font-size: 0.85rem; color: #4F46E5; display: inline-block; font-weight: 500;"><i class="fas fa-barcode" style="margin-right: 5px;"></i> ${order.resi}</div>` : '';
 
-        // Desain Kartu Pesanan Profesional
         const cardHtml = `
             <div class="order-card" style="padding: 0; overflow: hidden; border: 1px solid #E5E7EB; border-radius: 10px; background: #fff; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                
                 <div style="background: #F9FAFB; padding: 15px 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <strong style="color: #1F2937; font-size: 1.05rem;"><i class="fas fa-file-invoice" style="color: #9CA3AF; margin-right: 5px;"></i> ${order.invoice}</strong>
                         <span style="font-size: 0.85rem; color: #6B7280; margin-left: 12px;"><i class="far fa-clock"></i> ${order.date}</span>
                     </div>
-                    <span class="badge ${badge.class}" style="font-size: 0.75rem; padding: 6px 12px;">${badge.text}</span>
+                    <span style="font-size: 0.75rem; padding: 6px 12px; border-radius: 20px; font-weight: 600; background: ${badge.bg}; color: ${badge.color};">${badge.text}</span>
                 </div>
                 
                 <div style="padding: 20px;">
-                    
                     <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
                         <div style="flex: 1; min-width: 200px;">
                             <span style="font-size: 0.75rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Informasi Pembeli</span>
@@ -253,7 +255,6 @@ function renderOrders(filterStatus = 'all') {
                             ${actionButtons}
                         </div>
                     </div>
-                    
                 </div>
             </div>
         `;
@@ -261,9 +262,30 @@ function renderOrders(filterStatus = 'all') {
     });
 }
 
-// ==========================================
-// 3. FUNGSI UPDATE STATUS KE SUPABASE (PATCH)
-// ==========================================
+// A. Mendengarkan Input Pencarian (Real-time Typing)
+document.getElementById('searchInvoice').addEventListener('input', function(e) {
+    currentSearch = e.target.value;
+    renderOrders();
+});
+
+// B. Mendengarkan Pilihan Kurir
+document.getElementById('filterCourier').addEventListener('change', function(e) {
+    currentCourier = e.target.value;
+    renderOrders();
+});
+
+// C. Perbarui Logika Navigasi Tab
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        tabBtns.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        currentTab = this.getAttribute('data-status');
+        renderOrders();
+    });
+});
+
+
 // ==========================================
 // 3. FUNGSI UPDATE STATUS KE SUPABASE (PATCH)
 // ==========================================
@@ -503,5 +525,46 @@ async function editProductPrice(id, name, currentPrice) {
         fetchProductsAdmin(); // Refresh layar
     } catch (error) {
         Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan harga. Pastikan sesi login Anda masih aktif.', 'error');
+    }
+}
+
+// Auto-Refresh Database setiap 10 detik (Silent Polling)
+setInterval(() => {
+    // Hanya lakukan refresh jika Admin sedang membuka Tab Pesanan
+    if (viewOrders.style.display !== 'none') {
+        fetchOrdersFromSupabaseSilent();
+    }
+}, 10000);
+
+// Copy paste fungsi fetchOrdersFromSupabase Anda sebelumnya, 
+// namun HAPUS bagian innerHTML loading spinner-nya agar tidak kedap-kedip
+async function fetchOrdersFromSupabaseSilent() {
+    try {
+        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${adminToken}` };
+        const [ordersResponse, itemsResponse] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/order_items?select=*`, { headers })
+        ]);
+
+        if (!ordersResponse.ok || !itemsResponse.ok) return;
+
+        const dbOrders = await ordersResponse.json();
+        const dbItems = await itemsResponse.json(); 
+        
+        // ... (Masukkan logika pemetaan data orders seperti di fungsi aslinya) ...
+        // [Catatan: Pastikan Anda menyalin logika mapping orders.map dari fungsi fetchOrdersFromSupabase yang lama ke sini]
+        
+        // Populate Dropdown Kurir Otomatis (Hanya jika belum pernah diisi)
+        const selectKurir = document.getElementById('filterCourier');
+        if (selectKurir.options.length === 1) {
+            const unikKurir = [...new Set(dbOrders.map(item => item.courier_choice.split('-')[0].trim()))].filter(Boolean);
+            unikKurir.forEach(kurir => {
+                selectKurir.innerHTML += `<option value="${kurir}">${kurir.toUpperCase()}</option>`;
+            });
+        }
+
+        renderOrders(); // Refresh layar
+    } catch (e) {
+        // Biarkan diam jika gagal (agar admin tidak terganggu popup error terus menerus)
     }
 }

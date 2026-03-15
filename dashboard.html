@@ -40,13 +40,35 @@
         </div>
 
         <div class="content-area">
-            <div class="status-tabs" id="orderTabs">
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px; position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+                    <input type="text" id="searchInvoice" placeholder="Cari No. Invoice (INV-...)" style="width: 100%; padding: 12px 15px 12px 40px; border-radius: 8px; border: 1px solid #E5E7EB; outline: none; font-family: 'Inter', sans-serif;">
+                </div>
+                
+                <div style="min-width: 200px; position: relative;">
+                    <i class="fas fa-truck" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+                    <select id="filterCourier" style="width: 100%; padding: 12px 15px 12px 40px; border-radius: 8px; border: 1px solid #E5E7EB; outline: none; appearance: none; background-color: #fff; cursor: pointer; font-family: 'Inter', sans-serif;">
+                        <option value="all">Semua Kurir</option>
+                        </select>
+                    <i class="fas fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none;"></i>
+                </div>
+            </div>
+
+            <div class="status-tabs" id="orderTabs" style="overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
                 <button class="tab-btn active" data-status="all">Semua</button>
                 <button class="tab-btn" data-status="pending">Belum Bayar</button>
                 <button class="tab-btn" data-status="paid">Perlu Dikonfirmasi</button>
-                <button class="tab-btn" data-status="processing">Diproses</button>
-                <button class="tab-btn" data-status="shipped">Dikirim</button>
+                <button class="tab-btn" data-status="picking_up">Penjemputan</button>
+                <button class="tab-btn" data-status="dropping_off">Pengantaran</button>
+                <button class="tab-btn" data-status="returned">Pengembalian</button>
+                <button class="tab-btn" data-status="on_hold">Ditahan</button>
                 <button class="tab-btn" data-status="completed">Selesai</button>
+            </div>
+
+            <div id="viewOrders">
+                <div id="orderContainer"></div>
             </div>
 
             
