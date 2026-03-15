@@ -575,10 +575,11 @@ if (checkoutPage) {
                 title: 'Oops!',
                 text: 'Keranjang kosong! Mengarahkan kembali ke toko.',
                 icon: 'error',
-                confirmButtonColor: '#EF4444' // Warna merah KrupukMie
+                showConfirmButton: false,
+                timer: 1000, // Warna merah KrupukMie
             });
             window.location.href = 'store.html';
-            return;
+            return  //tunggu 2 detik
         }
 
         let cartHtml = '';
@@ -1428,18 +1429,19 @@ if (checkoutPage) {
     }
 
    // --- G. FUNGSI UPDATE GRAND TOTAL ---
-   function updateGrandTotal() {
-        const grandTotal = subtotalAmount + ongkirAmount; // Admin diserahkan ke Mayar
+       function updateGrandTotal() {
+        const grandTotal = subtotalAmount + ongkirAmount; 
 
         // Update rincian di bawah
         document.getElementById('checkoutOngkir').textContent = formatRupiahCheckout(ongkirAmount);
 
-        // Sembunyikan baris biaya admin di layar (karena nanti munculnya di halaman Mayar)
-        const adminElement = document.getElementById('checkoutAdmin');
-        if (adminElement) adminElement.parentElement.style.display = 'none';
+        // Update Sticky Footer (Untuk Mobile)
+        const mobileTotal = document.getElementById('checkoutGrandTotal');
+        if (mobileTotal) mobileTotal.textContent = formatRupiahCheckout(grandTotal);
 
-        // Update Sticky Footer
-        document.getElementById('checkoutGrandTotal').textContent = formatRupiahCheckout(grandTotal);
+        // 👇 TAMBAHKAN 2 BARIS INI (Untuk Desktop) 👇
+        const desktopTotal = document.getElementById('checkoutGrandTotalDesktop');
+        if (desktopTotal) desktopTotal.textContent = formatRupiahCheckout(grandTotal);
     }
 
     // Jalankan render awal
@@ -1459,7 +1461,7 @@ if (checkoutPage) {
                     icon: 'error',
                     confirmButtonColor: '#EF4444' // Warna merah KrupukMie
                 });
-                openSheet('sheetAddress'); 
+                openSheet('sheetShipping'); 
                 return;
             }
             let cart = JSON.parse(localStorage.getItem('krupukCart')) || [];

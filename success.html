@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Pembayaran Berhasil</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; text-align: center; padding-top: 50px; background: #f9fafb; }
+        h2 { color: #10B981; }
+    </style>
+</head>
+<body>
+    <h2><i class="fas fa-check-circle"></i> Pembayaran Berhasil!</h2>
+    <p>Mohon tunggu, Anda akan diarahkan kembali...</p>
+
+    <script>
+        // KODE PENGHANCUR IFRAME
+        // Ini akan memaksa browser utama (bukan iframe) untuk pindah halaman
+        setTimeout(() => {
+            window.top.location.href = 'index.html';
+        }, 2000); // Jeda 2 detik agar pembeli bisa membaca pesan sukses
+    </script>
+</body>
+</html>
